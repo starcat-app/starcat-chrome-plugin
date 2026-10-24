@@ -1562,8 +1562,9 @@
     const wikiLinks = context?.wiki_links || [];
     const actions = context?.actions || {};
     const wikiState = proFeatureState(isPro, wikiLinks.length > 0);
-    const codeflowState = proFeatureState(isPro, actions.codeflow === true);
-    const codebaseState = proFeatureState(isPro, actions.codebase === true);
+    // Local code graphs are free; availability comes from the Companion API.
+    const codeflowState = actions.codeflow === true ? PRO_FEATURE_STATE.AVAILABLE : PRO_FEATURE_STATE.UNAVAILABLE;
+    const codebaseState = actions.codebase === true ? PRO_FEATURE_STATE.AVAILABLE : PRO_FEATURE_STATE.UNAVAILABLE;
     const wikiItems = wikiState === PRO_FEATURE_STATE.AVAILABLE
       ? wikiLinks.map((link) => codeMenuLink(link.title || link.source || "Wiki", link.url, wikiIconFor(link)))
       : [codeMenuEmpty(wikiState === PRO_FEATURE_STATE.LOCKED
