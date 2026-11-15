@@ -10,8 +10,12 @@
     "128": "src/assets/icons/icon-128.png"
   },
   "permissions": [
-    "storage"
+    "storage",
+    "nativeMessaging"
   ],
+  "background": {
+    "service_worker": "src/background/background.js"
+  },
   "host_permissions": [
     "https://github.com/*",
     "https://google.ad/*",

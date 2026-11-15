@@ -20,11 +20,11 @@
 - 源码为原生 JavaScript、HTML、CSS，无依赖安装、转译或构建步骤。
 - `manifest.json` 是扩展入口；`src/shared/`、`src/content/`、`src/popup/`、
   `src/options/` 分别负责 Companion client、页面注入、快速配对和完整设置。
-- Chrome 端直接使用 `chrome.*` API；当前没有 Safari 端所需的
-  `src/background/background.js` loopback 转发层。
+- Chrome 使用 `chrome.*`，由 `src/background/background.js` 统一代理请求和 SSE、
+  管理配对与凭据；`src/pairing/` 为稳定配对标签页。
 - 插件只允许访问 Starcat macOS App 暴露的
   `http://127.0.0.1:{port}/plugin/v1/*` 或等价 `localhost` loopback 地址，
-  并使用 Local API Key。禁止改为远程服务，也不要把它与 GitHub token、AI key 或
+  并使用独立 Companion 设备 token 或高级设置中的 Local API Key。禁止改为远程服务，也不要把它与 GitHub token、AI key 或
   Starcat 后端 API key 混用。
 
 ## Chrome / Safari 双端同步
@@ -33,10 +33,10 @@ Chrome 与 Safari 的产品行为必须保持一致。修改功能、Manifest �
 契约、content script、样式、popup、options 或素材时，必须检查
 `../starcat-safari-plugin` 是否需要同步；除非需求明确限定单端，否则两仓分别实施。
 
-同步时保留平台差异：Chrome 端可在 shared/content 路径直接请求 loopback；
-Safari 端使用 `globalThis.browser || globalThis.chrome`，并由
-`src/background/background.js` 代理请求和 SSE，以规避 Safari content script 的
-CORS 限制。不要为了文件逐字一致而删除这些差异。
+两端均由 background 持有配对和新 token，content 只拿业务结果。Chrome 可用
+`starcat browser-host` 走 CLI，Native 写入失败不得切换通道重放；Safari 使用兼容 API，
+当前仍走 loopback HTTP。新 token 保存在扩展 IndexedDB；Chrome 同时限制 storage
+到可信上下文。禁止为了逐字同步删除这些平台差异。
 
 ## 验证
 
@@ -48,6 +48,8 @@ node --check src/shared/shared.js
 node --check src/content/content-script.js
 node --check src/popup/popup.js
 node --check src/options/options.js
+node --check src/background/background.js
+node --check src/pairing/pairing.js
 git diff --check
 ```
 

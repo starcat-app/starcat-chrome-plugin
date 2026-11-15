@@ -33,6 +33,10 @@ Include:
 
 ## Local API Key Handling
 
+New pairing uses an independent Companion device token, isolated in extension-origin IndexedDB. Pairing control requires the extension's own tab; content scripts receive neither claim secrets nor new tokens. Six digits identify the request for human comparison and are not authentication credentials. Only the app's explicit approval allows a one-time claim.
+
+The optional CLI native host is installed per user for one exact extension ID. It accepts only bounded loopback Companion routes. Native write failures do not fall back to HTTP. Revoke a device in Starcat to invalidate new requests and existing device event streams; deleting local configuration alone does not revoke it.
+
 The Starcat Local API Key authorizes only local loopback API access. Treat it as a secret:
 
 - Do not publish it in screenshots, bug reports, or logs.

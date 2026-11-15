@@ -7,13 +7,14 @@
  */
 
 (function () {
+  const extensionAPI = globalThis.chrome;
   const STORAGE_KEYS = {
     serviceURL: "starcatCompanionServiceURL",
     port: "starcatCompanionPort",
     token: "starcatCompanionToken"
   };
 
-  const DEFAULT_SERVICE_URL = "http://127.0.0.1:5001";
+  const DEFAULT_SERVICE_URL = "http://127.0.0.1:5051";
   const REPO_SEGMENT_BLOCKLIST = new Set([
     "about",
     "apps",
@@ -64,11 +65,19 @@
   }
 
   async function loadConfig() {
+    if (!["chrome-extension:", "safari-web-extension:"].includes(globalThis.location?.protocol)) {
+      const reply = await extensionAPI.runtime.sendMessage({ type: "starcat.publicConfig" });
+      return { serviceURL: reply.serviceURL, token: reply.configured ? "background-managed" : "" };
+    }
     const stored = await chrome.storage.local.get([
       STORAGE_KEYS.serviceURL,
       STORAGE_KEYS.port,
-      STORAGE_KEYS.token
+      STORAGE_KEYS.token,
+      "starcatCompanionConnection"
     ]);
+    if (stored.starcatCompanionConnection) {
+      return { ...stored.starcatCompanionConnection, token: "", paired: true };
+    }
     const migratedURL = stored[STORAGE_KEYS.serviceURL]
       || (stored[STORAGE_KEYS.port] ? `http://127.0.0.1:${stored[STORAGE_KEYS.port]}` : DEFAULT_SERVICE_URL);
     return {
@@ -78,6 +87,12 @@
   }
 
   async function saveConfig(config) {
+    const previous = await loadConfig();
+    if (previous.mode === "paired") {
+      if (!config.token && normalizeServiceURL(config.serviceURL) === previous.serviceURL) return;
+      throw new Error("unpair_before_manual_key");
+    }
+    await extensionAPI.storage.local.remove("starcatCompanionConnection");
     await chrome.storage.local.set({
       [STORAGE_KEYS.serviceURL]: normalizeServiceURL(config.serviceURL),
       [STORAGE_KEYS.token]: normalizeToken(config.token)
@@ -111,102 +126,38 @@
     const token = normalizeToken(config.token);
 
     async function request(path, options = {}) {
-      if (!token) {
-        throw new Error("missing_token");
-      }
-
-      const response = await fetch(`${baseURL}${path}`, {
-        ...options,
-        headers: {
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": "application/json",
-          ...(options.headers || {})
-        }
+      const response = await extensionAPI.runtime.sendMessage({
+        type: "starcat.localRequest",
+        path,
+        method: options.method || "GET",
+        body: options.body || null
       });
-
-      const text = await response.text();
-      let body = null;
-      if (text) {
-        try {
-          body = JSON.parse(text);
-        } catch {
-          body = { raw: text };
-        }
-      }
-
-      if (!response.ok) {
-        const error = new Error(body?.error || `http_${response.status}`);
-        error.status = response.status;
-        error.body = body;
+      if (!response?.ok) {
+        const error = new Error(response?.error || "request_failed");
+        error.status = response?.status || 0;
+        error.body = response?.body || null;
         throw error;
       }
-      return body;
+      return response.body;
     }
 
     async function streamEvents(params, handlers) {
-      if (!token) {
-        throw new Error("missing_token");
-      }
-
-      const query = new URLSearchParams();
-      if (params.repoID) query.set("repo_id", String(params.repoID));
-      const controller = new AbortController();
-      const response = await fetch(`${baseURL}/plugin/v1/events?${query.toString()}`, {
-        headers: {
-          "Authorization": `Bearer ${token}`,
-          "Accept": "text/event-stream"
-        },
-        signal: controller.signal
-      });
-      if (!response.ok || !response.body) {
-        throw new Error(`events_http_${response.status}`);
-      }
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-
-      (async () => {
-        try {
-          while (!controller.signal.aborted) {
-            const { value, done } = await reader.read();
-            if (done) break;
-            buffer += decoder.decode(value, { stream: true });
-            const parts = buffer.split("\n\n");
-            buffer = parts.pop() || "";
-            for (const part of parts) {
-              const event = parseSSE(part);
-              if (event) handlers.onEvent?.(event);
-            }
-          }
-        } catch (error) {
-          if (!controller.signal.aborted) handlers.onError?.(error);
+      const subscriptionID = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      const port = extensionAPI.runtime.connect({ name: "starcat.events" });
+      port.onMessage.addListener((message) => {
+        if (message?.subscriptionID !== subscriptionID) return;
+        if (message.type === "starcat.event") handlers.onEvent?.(message.event);
+        if (message.type === "starcat.event.error") {
+          handlers.onError?.(new Error(message.error || "events_failed"));
         }
-      })();
-
+      });
+      port.postMessage({ type: "open", subscriptionID, repoID: params.repoID });
       return {
         close() {
-          controller.abort();
-          reader.cancel().catch(() => {});
+          try { port.postMessage({ type: "close", subscriptionID }); } catch {}
+          port.disconnect();
         }
       };
-    }
-
-    function parseSSE(chunk) {
-      const lines = chunk.split("\n");
-      let type = "message";
-      let data = "";
-      for (const line of lines) {
-        if (line.startsWith(":")) continue;
-        if (line.startsWith("event:")) type = line.slice(6).trim();
-        if (line.startsWith("data:")) data += line.slice(5).trim();
-      }
-      if (!data) return null;
-      try {
-        return { type, data: JSON.parse(data) };
-      } catch {
-        return null;
-      }
     }
 
     return {
@@ -269,6 +220,7 @@
 
   globalThis.StarcatCompanion = {
     DEFAULT_SERVICE_URL,
+    extensionAPI,
     normalizeServiceURL,
     loadConfig,
     saveConfig,

@@ -1,0 +1,8 @@
+/* Stable tab pairing uses the options theme and native controls. */
+.page { max-width: 720px; }
+.panel { display: grid; gap: 16px; }
+#pairing-form { display: grid; gap: 16px; }
+#code { font: 600 44px ui-monospace, monospace; letter-spacing: 0.2em; text-align: center; }
+#status { white-space: pre-wrap; overflow-wrap: anywhere; }
+select { width: 100%; padding: 10px; color: inherit; background: transparent; border-radius: 8px; }
+[hidden] { display: none !important; }

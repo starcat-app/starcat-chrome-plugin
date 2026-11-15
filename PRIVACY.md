@@ -16,12 +16,14 @@ The extension does not:
 
 ## Local Data Storage
 
-The extension stores only the minimum pairing configuration in `chrome.storage.local`:
+The extension stores connection metadata in trusted-context `chrome.storage.local`:
 
-- Starcat local service port.
-- Starcat Local API Key.
+- The saved loopback address, browser instance ID, device ID, and selected transport.
+- A manually entered legacy Local API Key, when that advanced option is used.
 
-The Local API Key is used only to authenticate requests to the local Starcat app service on `127.0.0.1`.
+Newly paired device tokens are stored separately in extension-origin IndexedDB and are not returned to content scripts. Pending request secrets remain in the background and expire with the request. The app records the browser type, chosen device name, browser instance ID, and pairing/access times for device management. It holds the extension origin temporarily to bind the one-time claim. The instance ID is randomly generated, not a hardware or browsing fingerprint.
+
+Unpairing asks the app to revoke that device token. Clearing only local credentials does not revoke app authorization; revoke it in Starcat when the app is reachable. Legacy shared Keys require rotation in the app.
 
 ## Local Communication
 
@@ -30,6 +32,8 @@ The extension communicates with:
 ```text
 http://127.0.0.1:{port}/plugin/v1
 ```
+
+An optional user-installed Chrome Native Messaging host can proxy the same local traffic through the Starcat CLI. Its manifest permits only the specified extension ID. Native discovery probes the saved address and fixed loopback ports; no LAN scan or cloud discovery is performed.
 
 The Starcat app owns all business data, including repository context, private notes, wiki links, recommendations, health scores, and CodeFlow / Codebase actions.
 

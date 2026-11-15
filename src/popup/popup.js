@@ -60,7 +60,7 @@
       setup: {
         label: "Setup required",
         title: "Finish local pairing.",
-        description: "Enter the service URL and Local API Key from Starcat Settings.",
+        description: "Open Connect without a key and compare the six digits in Starcat.",
         checked: "Not checked"
       },
       ready: {
@@ -127,7 +127,7 @@
 
   async function checkConnection(current) {
     updateServiceMetadata(current);
-    if (!current.serviceURL || !current.token) {
+    if (!current.serviceURL || (!current.token && !current.paired)) {
       setConnectionState("setup");
       return { ok: false, message: "Local pairing is incomplete." };
     }
@@ -151,7 +151,7 @@
     setFormFeedback("Saving…");
     try {
       const saved = await saveCurrentConfig();
-      setConnectionState(saved.token ? "ready" : "setup");
+      setConnectionState(saved.token || saved.paired ? "ready" : "setup");
       setFormFeedback("Saved.", "success");
     } catch (error) {
       setFormFeedback(`Save failed: ${error.message}`, "error");

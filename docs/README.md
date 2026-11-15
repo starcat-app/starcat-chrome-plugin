@@ -2,6 +2,8 @@
 
 本目录只保存上架准备资料，不会被打入 Chrome Web Store ZIP。所有描述以当前 `manifest.json` 与 `src/` 行为为准。
 
+> 2026-11-15：源码新增设备 token、稳定六位码配对页、background 代理及可选 `nativeMessaging`。下列历史材料尚未按这些变化完成商店终审，提交前以根 README / PRIVACY / SECURITY 为当前说明重新核对权限和审核步骤；发布继续 No-Go。
+
 | 文件 | 用途 |
 |---|---|
 | [STORE_RELEASE_GUIDE.md](STORE_RELEASE_GUIDE.md) | 发布流程、阻断项、打包与提交步骤。 |

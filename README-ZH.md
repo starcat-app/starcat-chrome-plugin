@@ -72,15 +72,15 @@ Starcat Chrome Plugin 是 Starcat 的 GitHub 与 Google 搜索结果增强插件
 2. 开启 Developer mode。
 3. 点击 Load unpacked。
 4. 选择本目录: `supports/extensions/starcat-chrome-plugin`。
-5. 在 Starcat 打开 Settings → Integrations → Browser Plugin, 启用服务; 然后到 Settings → Integrations → Local API Key 复制 key。
-6. 左键点击工具栏里的 Starcat 插件图标, 在弹窗中填入 endpoint 端口和 Local API Key。
-7. 点击 Test。
+5. 在 Starcat 的 Settings → Integrations → Browser Plugin 启用服务。
+6. 点击插件的“连接 Starcat”打开稳定配对标签页，选择发现的 App 后点击连接。
+7. 核对两边六位数字，仅在一致时到 Starcat 批准。
 
-完整配置页仍可从弹窗中的 Open full options 打开。
+切换到 App 时配对标签页保持打开。发现仅检查保存地址、默认 `5051` 和旧端口 `5001`，自定义端口可在高级设置填写；发现本身不会申请配对。完整设置保留手工 Key 入口。
 
 ## 通信边界
 
-插件只通过 Starcat App 暴露的本机 HTTP 服务通信:
+background 统一持有配对、凭据、业务请求和事件流。macOS 可用 `starcat browser-host install --extension-id <实际扩展ID>` 安装可选宿主，经 CLI 通信；没有宿主时使用本机 HTTP 服务：
 
 ```text
 http://127.0.0.1:{port}/plugin/v1
@@ -89,10 +89,12 @@ http://127.0.0.1:{port}/plugin/v1
 所有业务请求都需要:
 
 ```text
-Authorization: Bearer <local-api-key>
+Authorization: Bearer <browser-device-token-or-manual-key>
 ```
 
-Starcat Local API Key 只授权本机 loopback 接口, 不等同于 GitHub token、AI key 或 Starcat 后端 API key。
+新配对签发独立可撤销 token，保存在扩展 origin 的 IndexedDB；content script 只获取业务结果，不获取新 token 或配对秘密。Starcat 记录设备名称、配对和访问时间。“取消浏览器配对”撤销服务端授权；“仅清除本地凭据”不撤销授权，离线时还需在 Starcat 撤销。手工 Key 为共享凭据，需在 App 轮换才能失效。
+
+原生宿主按用户及实际扩展 ID 安装，CLI 升级或移动后重新安装。Native 写入失败不切换 HTTP 重放；其发现同样是有限候选地址，不能发现任意自定义端口。
 
 ## 文件说明
 
@@ -105,6 +107,8 @@ Starcat Local API Key 只授权本机 loopback 接口, 不等同于 GitHub token
 | `CONTRIBUTING.md` | 本地开发与贡献约定。 |
 | `CHANGELOG.md` | 版本变更记录。 |
 | `src/shared/shared.js` | 配置读写、GitHub repo URL 解析、本机 API client。 |
+| `src/background/background.js` | 配对、凭据、Companion 代理与可选 CLI 原生通道。 |
+| `src/pairing/` | 稳定六位码配对标签页、有限发现与取消配对。 |
 | `src/popup/` | 左键点击插件图标时显示的快速配对弹窗。 |
 | `src/options/` | 端口、Local API Key 配置与连接测试页。 |
 | `src/content/` | GitHub repo 页面板注入与渲染。 |
@@ -112,7 +116,7 @@ Starcat Local API Key 只授权本机 loopback 接口, 不等同于 GitHub token
 
 ## 发布资料
 
-商店发布前请先阅读 [docs/README.md](docs/README.md)。其中的资料以当前源码行为为准；特别是 Google 搜索页权限、Local API Key 配对和本机 Companion API 的数据边界。
+商店发布前请先阅读 [docs/README.md](docs/README.md)。历史商店材料仍需按新配对、`nativeMessaging` 权限和隐私边界重新审核，并完成真实浏览器验收；本次源码实现不解除发布 No-Go。
 
 ## 验证
 
@@ -122,4 +126,6 @@ node --check supports/extensions/starcat-chrome-plugin/src/shared/shared.js
 node --check supports/extensions/starcat-chrome-plugin/src/popup/popup.js
 node --check supports/extensions/starcat-chrome-plugin/src/options/options.js
 node --check supports/extensions/starcat-chrome-plugin/src/content/content-script.js
+node --check supports/extensions/starcat-chrome-plugin/src/background/background.js
+node --check supports/extensions/starcat-chrome-plugin/src/pairing/pairing.js
 ```

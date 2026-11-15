@@ -72,15 +72,15 @@ Starcat Chrome Plugin enhances GitHub repository pages and Google search results
 2. Enable Developer mode.
 3. Click Load unpacked.
 4. Select `supports/extensions/starcat-chrome-plugin`.
-5. In Starcat, open Settings → Integrations → Browser Plugin and enable the service. Then open Settings → Integrations → Local API Key and copy the key.
-6. Left-click the Starcat toolbar icon and enter the endpoint port and Local API Key in the popup.
-7. Click Test.
+5. In Starcat, enable Settings → Integrations → Browser Plugin.
+6. Click the extension's Connect to Starcat action to open its pairing tab, choose the discovered app, and click Connect.
+7. Compare the six digits in both windows and approve the matching request in Starcat.
 
-The full configuration page remains available through Open full options in the popup.
+The pairing tab stays open while switching to Starcat. Discovery checks the saved address, `127.0.0.1:5051`, and legacy port `5001`; custom ports remain available in advanced settings. Discovery alone never requests approval. Manual Local API Key authentication remains available in full options.
 
 ## Communication Boundary
 
-The extension communicates only with the local HTTP service exposed by the Starcat app:
+The background owns all Companion requests, pairing, device credentials, and event streams. With the optional macOS host installed using `starcat browser-host install --extension-id <actual-extension-id>`, Chrome connects through the CLI. Otherwise it uses the app's loopback HTTP service:
 
 ```text
 http://127.0.0.1:{port}/plugin/v1
@@ -89,10 +89,12 @@ http://127.0.0.1:{port}/plugin/v1
 Every business request requires:
 
 ```text
-Authorization: Bearer <local-api-key>
+Authorization: Bearer <browser-device-token-or-manual-key>
 ```
 
-The Starcat Local API Key authorizes only the local loopback interface. It is not a GitHub token, AI key, or Starcat backend API key.
+Pairing issues an independent revocable token, stored in extension-origin IndexedDB; content scripts receive business results, never new device tokens or pairing secrets. Starcat stores device names and pairing/access times. Unpair browser revokes server authorization; Clear locally only does not, and requires later revocation in Starcat when offline. Manual Keys are shared credentials and must be rotated in the app to invalidate them.
+
+Native Messaging installation is optional, per user, and restricted to the exact extension ID. Reinstall the host after moving/upgrading the CLI. A failed native write is never retried over HTTP. Native discovery also uses finite loopback candidates, so it cannot find every arbitrary custom port.
 
 ## Repository Layout
 
@@ -105,6 +107,8 @@ The Starcat Local API Key authorizes only the local loopback interface. It is no
 | `CONTRIBUTING.md` | Local development and contribution guidelines. |
 | `CHANGELOG.md` | Version history. |
 | `src/shared/shared.js` | Configuration storage, GitHub repository URL parsing, and local API client. |
+| `src/background/background.js` | Controlled pairing, credentials, Companion proxy, and optional CLI native transport. |
+| `src/pairing/` | Stable six-digit pairing tab, discovery, and unpairing. |
 | `src/popup/` | Quick-pairing popup shown when the toolbar icon is left-clicked. |
 | `src/options/` | Endpoint port, Local API Key, and connection testing. |
 | `src/content/` | Page injection and rendering for GitHub repositories and Google search results. |
@@ -112,7 +116,7 @@ The Starcat Local API Key authorizes only the local loopback interface. It is no
 
 ## Release Materials
 
-Read [docs/README.md](docs/README.md) before preparing a store release. The documents follow the current source behavior, especially the permissions used on Google search pages, Local API Key pairing, and the local Companion API data boundary.
+Read [docs/README.md](docs/README.md) before preparing a store release. Historical store materials require a pairing/nativeMessaging privacy review and real browser acceptance before submission; source implementation does not remove the release No-Go.
 
 ## Validation
 
@@ -122,4 +126,6 @@ node --check supports/extensions/starcat-chrome-plugin/src/shared/shared.js
 node --check supports/extensions/starcat-chrome-plugin/src/popup/popup.js
 node --check supports/extensions/starcat-chrome-plugin/src/options/options.js
 node --check supports/extensions/starcat-chrome-plugin/src/content/content-script.js
+node --check supports/extensions/starcat-chrome-plugin/src/background/background.js
+node --check supports/extensions/starcat-chrome-plugin/src/pairing/pairing.js
 ```

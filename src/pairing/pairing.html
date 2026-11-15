@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Starcat pairing</title>
+    <link rel="stylesheet" href="../options/options.css">
+    <link rel="stylesheet" href="pairing.css">
+  </head>
+  <body>
+    <main class="page">
+      <section class="panel">
+        <h1 data-text="title">Connect to Starcat</h1>
+        <p data-text="intro">Find the app on this Mac, then compare the six digits in Starcat.</p>
+        <form id="pairing-form">
+          <label class="field"><span data-text="name">Browser name</span><input id="name" maxlength="128" required></label>
+          <div class="actions"><button id="discover" type="button" data-text="discover">Find Starcat</button></div>
+          <label class="field"><span data-text="instances">Available apps</span><select id="instances"></select></label>
+          <details><summary data-text="advanced">Custom service address</summary>
+            <label class="field"><span data-text="address">Service address</span><input id="address" placeholder="http://127.0.0.1:5051" autocomplete="off" spellcheck="false"></label>
+          </details>
+          <div class="actions"><button id="connect" type="submit" data-text="connect">Connect</button><button id="cancel" type="button" data-text="cancel" disabled>Cancel request</button></div>
+        </form>
+        <p id="code" aria-live="polite"></p>
+        <p id="status" role="status" aria-live="polite"></p>
+        <div class="actions">
+          <button id="disconnect" type="button" data-text="disconnect">Unpair browser</button>
+          <button id="forget" type="button" data-text="forget" hidden>Clear locally only</button>
+        </div>
+        <p data-text="offline">Clearing locally while Starcat is offline does not revoke the app authorization. Revoke this browser in Starcat Settings.</p>
+        <a href="../options/options.html" data-text="manual">Advanced settings and manual Key</a>
+      </section>
+    </main>
+    <script src="../shared/shared.js"></script>
+    <script src="pairing.js"></script>
+  </body>
+</html>
