@@ -136,6 +136,8 @@
     if (action === "start") {
       if ((await config()).mode === "paired") throw new Error("pairing_already_configured");
       if (pending && !pending.completed && Date.parse(pending.receipt.expires_at) > Date.now()) throw new Error("pairing_pending");
+      // A multi-app result clears the page address; never turn that into an implicit default selection.
+      if (typeof message.serviceURL !== "string" || !message.serviceURL.trim()) throw new Error("service_selection_required");
       const stored = await api.storage.local.get("starcatCompanionInstanceID");
       const instanceID = stored.starcatCompanionInstanceID || crypto.randomUUID();
       await api.storage.local.set({ starcatCompanionInstanceID: instanceID });
