@@ -72,11 +72,15 @@ Starcat Chrome Plugin enhances GitHub repository pages and Google search results
 2. Enable Developer mode.
 3. Click Load unpacked.
 4. Select `supports/extensions/starcat-chrome-plugin`.
-5. In Starcat, enable Settings → Integrations → Browser Plugin.
+5. In Starcat, open Settings → Extensions & Connections → Browser Extensions and enable Browser Plugin Service.
 6. Click the extension's Connect to Starcat action to open its pairing tab, choose the discovered app, and click Connect.
 7. Compare the six digits in both windows and approve the matching request in Starcat.
 
-The pairing tab stays open while switching to Starcat. Discovery checks the saved address, `127.0.0.1:5051`, and legacy port `5001`; custom ports remain available in advanced settings. Discovery alone never requests approval. Manual Local API Key authentication remains available in full options.
+The pairing tab stays open while switching to Starcat. Discovery checks the saved address and the single default address `127.0.0.1:5051`; custom ports remain available in advanced settings. Discovery alone never requests approval. Manual Local API Key authentication remains available in full options.
+
+Discovery has a five-second total budget, including Native Messaging and HTTP fallback. Each HTTP address probe has a 1.3-second limit; native discovery reserves the final 1.5 seconds for fallback. Pairing shows a countdown to the app's 120-second deadline, clears the code on expiry, and ignores late replies. Connection requests time out after five seconds and are never automatically replayed. Errors distinguish discovery timeout, rejection, expiry, connection timeout, and credential storage failure.
+
+Use **Use a Key to connect** on the pairing page for manual authentication. Copy the Key from Starcat → Settings → Extensions & Connections → Browser Extensions → Local API Key. The same page shows the service address. Unpair an already paired browser before switching to a manual Key.
 
 ## Communication Boundary
 

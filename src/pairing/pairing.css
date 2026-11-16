@@ -4,5 +4,7 @@
 #pairing-form { display: grid; gap: 16px; }
 #code { font: 600 44px ui-monospace, monospace; letter-spacing: 0.2em; text-align: center; }
 #status { white-space: pre-wrap; overflow-wrap: anywhere; }
+#countdown { min-height: 1.5em; text-align: center; font-variant-numeric: tabular-nums; }
+#manual { display: inline-flex; align-items: center; text-decoration: none; }
 select { width: 100%; padding: 10px; color: inherit; background: transparent; border-radius: 8px; }
 [hidden] { display: none !important; }

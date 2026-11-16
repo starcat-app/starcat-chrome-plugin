@@ -33,7 +33,7 @@ The extension communicates with:
 http://127.0.0.1:{port}/plugin/v1
 ```
 
-An optional user-installed Chrome Native Messaging host can proxy the same local traffic through the Starcat CLI. Its manifest permits only the specified extension ID. Native discovery probes the saved address and fixed loopback ports; no LAN scan or cloud discovery is performed.
+An optional user-installed Chrome Native Messaging host can proxy the same local traffic through the Starcat CLI. Its manifest permits only the specified extension ID. Native discovery probes the saved address and the single default loopback port `5051`; no LAN scan or cloud discovery is performed.
 
 The Starcat app owns all business data, including repository context, private notes, wiki links, recommendations, health scores, and CodeFlow / Codebase actions.
 

@@ -15,6 +15,48 @@
   };
 
   const DEFAULT_SERVICE_URL = "http://127.0.0.1:5051";
+  // Keep pairing, options and popup recovery text consistent; never display
+  // raw transport/storage errors or credential details in these user surfaces.
+  function connectionErrorMessage(error, locale = "en") {
+    const messages = {
+      en: {
+        discovery_timeout: "Finding Starcat timed out. Open Starcat, enable Browser Plugin Service in Settings > Extensions & Connections > Browser Extensions, then try again or use a Key.",
+        connection_timeout: "The connection timed out after 5 seconds. Check that Starcat is running, then try again. The request may have reached the app; check it before starting another request.",
+        pairing_expired: "The request expired. Pair again.",
+        pairing_claim_invalid: "The pairing request is no longer valid. Pair again.",
+        credential_storage_failed: "The browser could not save the pairing credentials. Try again or use a Key.",
+        pairing_already_configured: "This browser is already paired. Unpair it before connecting again or using a manual Key.",
+        unpair_before_manual_key: "Unpair this browser on the pairing page before saving a manual Key.",
+        native_host_unavailable: "The local connection component is unavailable. Check that Starcat is running and try again, or use a Key.",
+        companion_unavailable: "Cannot reach Starcat. Open the app and enable Browser Plugin Service, then try again.",
+        invalid_pairing_response: "Starcat returned an invalid pairing response. Check for app and extension updates, then pair again.",
+        pairing_revoked: "This browser's authorization was revoked. Pair again or use a Key.",
+        missing_token: "Pair this browser or enter a Local API Key first.",
+        unauthorized: "The Local API Key is invalid or has changed. Copy it again from Starcat Settings > Extensions & Connections > Browser Extensions > Local API Key.",
+        failed: "Connection failed. Check that Starcat is running and the service address is correct, then try again or use a Key."
+      },
+      zh: {
+        discovery_timeout: "查找 Starcat 超时。请打开 Starcat，在“设置 → 扩展与连接 → 浏览器扩展”中启用浏览器插件服务，再重新查找或使用 Key 连接。",
+        connection_timeout: "连接已超时（5 秒）。请确认 Starcat 正在运行后重试。请求可能已送达 App，再次发起前请先检查 App 中的请求状态。",
+        pairing_expired: "请求已过期，请重新配对。",
+        pairing_claim_invalid: "配对请求已失效，请重新配对。",
+        credential_storage_failed: "未能在浏览器中保存配对凭据，请重试或使用 Key 连接。",
+        pairing_already_configured: "此浏览器已配对，请先取消配对，再重新连接或使用手工 Key。",
+        unpair_before_manual_key: "请先在配对页取消此浏览器的配对，再保存手工 Key。",
+        native_host_unavailable: "本地连接组件不可用，请确认 Starcat 正在运行后重试，或使用 Key 连接。",
+        companion_unavailable: "无法连接 Starcat，请打开 App 并启用浏览器插件服务后重试。",
+        invalid_pairing_response: "Starcat 返回的配对信息无效，请检查 App 和扩展更新后重新配对。",
+        pairing_revoked: "此浏览器的授权已撤销，请重新配对或使用 Key 连接。",
+        missing_token: "请先配对此浏览器，或填写本地 API Key。",
+        unauthorized: "本地 API Key 无效或已更新，请从“Starcat 设置 → 扩展与连接 → 浏览器扩展 → 本地 API Key”重新复制。",
+        failed: "连接失败，请确认 Starcat 正在运行且服务地址正确，再重试或使用 Key 连接。"
+      }
+    };
+    const text = messages[locale] || messages.en;
+    const code = text[error?.message] ? error.message
+      : error?.status === 401 || error?.message === "http_401" ? "unauthorized" : "failed";
+    return text[code] || text.failed;
+  }
   const REPO_SEGMENT_BLOCKLIST = new Set([
     "about",
     "apps",
@@ -221,6 +263,7 @@
   globalThis.StarcatCompanion = {
     DEFAULT_SERVICE_URL,
     extensionAPI,
+    connectionErrorMessage,
     normalizeServiceURL,
     loadConfig,
     saveConfig,

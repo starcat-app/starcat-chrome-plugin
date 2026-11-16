@@ -38,7 +38,7 @@
           <div class="panel__heading">
             <p class="eyebrow" data-i18n="pairing.eyebrow">Pairing</p>
             <h2 data-i18n="pairing.title">Local service</h2>
-            <p data-i18n="pairing.description">Use the service URL and Local API Key shown in Starcat Settings &gt; Browser Plugin.</p>
+            <p data-i18n="pairing.description">Enable Browser Plugin Service in Starcat's Browser Extensions settings and copy its service URL. Unpair this browser before switching to a manual Key.</p>
           </div>
 
           <label class="field">
@@ -48,7 +48,8 @@
 
           <label class="field">
             <span data-i18n="field.token">Local API Key</span>
-            <input id="token" name="token" type="password" autocomplete="off" spellcheck="false">
+            <input id="token" name="token" type="password" autocomplete="off" spellcheck="false" aria-describedby="key-help">
+            <small id="key-help" data-i18n="field.tokenHelp">Copy the Key from Starcat &gt; Settings &gt; Extensions &amp; Connections &gt; Browser Extensions &gt; Local API Key.</small>
           </label>
 
           <div class="actions">

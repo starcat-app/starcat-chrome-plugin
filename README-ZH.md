@@ -72,11 +72,15 @@ Starcat Chrome Plugin 是 Starcat 的 GitHub 与 Google 搜索结果增强插件
 2. 开启 Developer mode。
 3. 点击 Load unpacked。
 4. 选择本目录: `supports/extensions/starcat-chrome-plugin`。
-5. 在 Starcat 的 Settings → Integrations → Browser Plugin 启用服务。
+5. 打开 Starcat → 设置 → 扩展与连接 → 浏览器扩展，启用浏览器插件服务。
 6. 点击插件的“连接 Starcat”打开稳定配对标签页，选择发现的 App 后点击连接。
 7. 核对两边六位数字，仅在一致时到 Starcat 批准。
 
-切换到 App 时配对标签页保持打开。发现仅检查保存地址、默认 `5051` 和旧端口 `5001`，自定义端口可在高级设置填写；发现本身不会申请配对。完整设置保留手工 Key 入口。
+切换到 App 时配对标签页保持打开。发现仅检查保存地址和唯一默认端口 `5051`，自定义端口可在高级设置填写；发现本身不会申请配对。完整设置保留手工 Key 入口。
+
+自动发现总预算为 5 秒，包含 Native Messaging 与 HTTP 回退；每个 HTTP 地址最多探测 1.3 秒，原生发现预留最后 1.5 秒给回退。配对按 App 返回的 120 秒截止时间显示倒计时，到期清除验证码并忽略迟到响应。连接请求 5 秒超时，不自动重放。发现超时、用户拒绝、过期、连接超时和凭据保存失败分别提示。
+
+配对页始终提供“使用 Key 连接”。获取路径为 Starcat → 设置 → 扩展与连接 → 浏览器扩展 → 本地 API Key → 复制；同页可以复制服务地址。已配对的浏览器需先取消配对，再切换为手工 Key。
 
 ## 通信边界
 

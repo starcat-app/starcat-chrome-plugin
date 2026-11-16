@@ -53,33 +53,48 @@
     };
   }
 
+  // Native Messaging has no abort API. Bound its wait as well as fetch/body
+  // decoding; a late native reply is ignored and must never trigger a replay.
+  async function withTimeout(operation, milliseconds, code = "connection_timeout") {
+    if (milliseconds <= 0) throw new Error(code);
+    const controller = new AbortController();
+    let timer;
+    const timeout = new Promise((_resolve, reject) => {
+      timer = setTimeout(() => { reject(new Error(code)); controller.abort(); }, milliseconds);
+    });
+    try { return await Promise.race([operation(controller.signal), timeout]); }
+    finally { clearTimeout(timer); }
+  }
+
   // Transport is fixed when pairing begins. A failed write is never retried
   // over HTTP, because the native host may already have accepted the operation.
   async function jsonRequest(base, path, options = {}, token = "", transport = "http") {
-    if (transport === "native") {
-      const result = await api.runtime.sendNativeMessage("com.starcat.browser", {
-        action: "request", service_url: localURL(base), path,
-        method: options.method || "GET", body: options.body ? JSON.parse(options.body) : null, token
+    return withTimeout(async (signal) => {
+      if (transport === "native") {
+        const result = await api.runtime.sendNativeMessage("com.starcat.browser", {
+          action: "request", service_url: localURL(base), path,
+          method: options.method || "GET", body: options.body ? JSON.parse(options.body) : null, token
+        }).catch(() => { throw new Error("native_host_unavailable"); });
+        if (!result?.ok) {
+          const error = new Error(result?.body?.error || result?.error || "native_host_unavailable");
+          error.status = result?.status || 0;
+          throw error;
+        }
+        return result.body;
+      }
+      const response = await fetch(`${localURL(base)}${path}`, {
+        method: options.method || "GET", body: options.body || undefined,
+        signal, cache: "no-store", redirect: "error",
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) }
       });
-      if (!result?.ok) {
-        const error = new Error(result?.body?.error || result?.error || "native_host_unavailable");
-        error.status = result?.status || 0;
+      const body = await response.json();
+      if (!response.ok) {
+        const error = new Error(body.error || `http_${response.status}`);
+        error.status = response.status;
         throw error;
       }
-      return result.body;
-    }
-    const response = await fetch(`${localURL(base)}${path}`, {
-      method: options.method || "GET", body: options.body || undefined,
-      signal: AbortSignal.timeout(5000), cache: "no-store", redirect: "error",
-      headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) }
-    });
-    const body = await response.json();
-    if (!response.ok) {
-      const error = new Error(body.error || `http_${response.status}`);
-      error.status = response.status;
-      throw error;
-    }
-    return body;
+      return body;
+    }, 5000);
   }
 
   function extensionPage(sender) {
@@ -96,37 +111,48 @@
     }[method]?.includes(name) === true;
   }
 
-  // Probe only saved/default/legacy candidates, never a range of local ports.
+  // Probe only the saved address and App default, never a range of local ports.
   async function discover(savedURL) {
-    const current = await config();
-    nativeAddresses.clear();
-    // Discovery is read-only: a missing host can fall back before any pairing,
-    // credential exchange or business write has started.
-    if (api.runtime.sendNativeMessage) {
-      try {
-        const native = await api.runtime.sendNativeMessage("com.starcat.browser", {
-          action: "discover", service_url: localURL(savedURL || current.serviceURL)
-        });
-        if (native?.ok && Array.isArray(native.body?.candidates) && native.body.candidates.length) {
-          native.body.candidates.forEach((item) => nativeAddresses.add(localURL(item.serviceURL)));
-          return native.body.candidates;
+    const deadline = Date.now() + 5000;
+    return withTimeout(async () => {
+      const current = await config();
+      nativeAddresses.clear();
+      // Reserve time for HTTP fallback inside the shared five-second budget.
+      // Discovery is read-only and never exchanges credentials or starts pairing.
+      if (api.runtime.sendNativeMessage) {
+        try {
+          const native = await withTimeout(() => api.runtime.sendNativeMessage("com.starcat.browser", {
+            action: "discover", service_url: localURL(savedURL || current.serviceURL)
+          }), Math.min(3500, deadline - Date.now()), "discovery_timeout");
+          if (native?.ok && Array.isArray(native.body?.candidates) && native.body.candidates.length) {
+            native.body.candidates.forEach((item) => nativeAddresses.add(localURL(item.serviceURL)));
+            return native.body.candidates;
+          }
+        } catch {}
+      }
+      const candidates = [...new Set([savedURL || current.serviceURL, DEFAULT_URL].map(localURL))];
+      let timedOut = false;
+      const found = await Promise.all(candidates.map(async (serviceURL) => {
+        try {
+          return await withTimeout(async (signal) => {
+            const response = await fetch(`${serviceURL}/plugin/v1/discover`, {
+              signal, cache: "no-store", redirect: "error"
+            });
+            const data = await response.json();
+            if (!response.ok || data.product !== "starcat" || data.protocol_version !== "1"
+                || data.pairing !== "numeric_comparison" || !data.instance_id) return null;
+            return { serviceURL, instanceID: data.instance_id, channel: data.channel };
+          }, Math.min(1300, deadline - Date.now()), "discovery_timeout");
+        } catch (error) {
+          if (error.message === "discovery_timeout") timedOut = true;
+          return null;
         }
-      } catch {}
-    }
-    const candidates = [...new Set([savedURL || current.serviceURL, DEFAULT_URL, "http://127.0.0.1:5001"].map(localURL))];
-    const found = await Promise.all(candidates.map(async (serviceURL) => {
-      try {
-        const response = await fetch(`${serviceURL}/plugin/v1/discover`, {
-          signal: AbortSignal.timeout(1300), cache: "no-store", redirect: "error"
-        });
-        const data = await response.json();
-        if (!response.ok || data.product !== "starcat" || data.protocol_version !== "1"
-            || data.pairing !== "numeric_comparison" || !data.instance_id) return null;
-        return { serviceURL, instanceID: data.instance_id, channel: data.channel };
-      } catch { return null; }
-    }));
-    const seen = new Set();
-    return found.filter((item) => item && !seen.has(item.instanceID) && seen.add(item.instanceID));
+      }));
+      const seen = new Set();
+      const matches = found.filter((item) => item && !seen.has(item.instanceID) && seen.add(item.instanceID));
+      if (!matches.length && timedOut) throw new Error("discovery_timeout");
+      return matches;
+    }, 5000, "discovery_timeout");
   }
 
   async function pairing(message, sender) {

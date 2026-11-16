@@ -12,9 +12,11 @@
       title: "Connect to Starcat", intro: "Find Starcat on this Mac, then compare the six digits in the app. Only approve a request you started.",
       name: "Browser name", discover: "Find Starcat", instances: "Available apps", advanced: "Custom service address",
       address: "Service address", connect: "Connect", cancel: "Cancel request", disconnect: "Unpair browser",
-      forget: "Clear locally only", manual: "Advanced settings and manual Key",
+      forget: "Clear locally only", manual: "Use a Key to connect", retry: "Pair again",
+      key_help: "Find and copy your Key in Starcat > Settings > Extensions & Connections > Browser Extensions > Local API Key. If this browser is already paired, unpair it before switching to a manual Key.",
+      countdown: "Request expires in {seconds} seconds.", connecting: "Sending a pairing request…",
       offline: "Clearing locally does not revoke app authorization. When offline, also revoke this browser in Starcat Settings. Manual Keys are shared and must be rotated in the app.",
-      searching: "Finding Starcat…", none: "No compatible app found. Enable Browser Plugin Service in Starcat, or enter its custom address.",
+      searching: "Finding Starcat (up to 5 seconds)…", none: "No compatible app found. Open Starcat > Settings > Extensions & Connections > Browser Extensions and enable Browser Plugin Service, then try again or use a Key.",
       choose: "Choose an app", ready: "Choose an app and click Connect.", waiting: "Compare these six digits in Starcat and approve only if they match.",
       service_selection_required: "Choose an app or enter its service address before connecting.",
       approved: "Paired. This browser now has its own revocable authorization.", rejected: "Pairing was rejected in Starcat.",
@@ -31,9 +33,11 @@
       title: "连接 Starcat", intro: "查找这台 Mac 上的 Starcat，在 App 中核对六位数字。只批准自己主动发起的请求。",
       name: "浏览器名称", discover: "查找 Starcat", instances: "可连接的 App", advanced: "自定义服务地址",
       address: "服务地址", connect: "连接", cancel: "取消请求", disconnect: "取消浏览器配对",
-      forget: "仅清除本地凭据", manual: "高级设置与手工 Key",
+      forget: "仅清除本地凭据", manual: "使用 Key 连接", retry: "重新配对",
+      key_help: "获取 Key：Starcat → 设置 → 扩展与连接 → 浏览器扩展 → 本地 API Key → 复制。已配对的浏览器需先取消配对，再切换为手工 Key。",
+      countdown: "请求将在 {seconds} 秒后过期。", connecting: "正在发送配对请求…",
       offline: "清除本地凭据不会撤销 App 端授权。离线时还需在 Starcat 设置中撤销该浏览器。手工 Key 为共享凭据，需在 App 中轮换才能使其失效。",
-      searching: "正在查找 Starcat…", none: "没有找到兼容的 App。请在 Starcat 中启用浏览器插件服务，或填写自定义服务地址。",
+      searching: "正在查找 Starcat（最多 5 秒）…", none: "没有找到兼容的 App。请在“Starcat 设置 → 扩展与连接 → 浏览器扩展”中启用浏览器插件服务，再重新查找或使用 Key 连接。",
       choose: "请选择 App", ready: "选择 App 后点击连接。", waiting: "请在 Starcat 中核对这六位数字，仅在数字一致时批准。",
       service_selection_required: "请先选择 App 或填写服务地址，再点击连接。",
       approved: "配对成功。此浏览器已获得可单独撤销的授权。", rejected: "Starcat 已拒绝此次配对。",
@@ -52,38 +56,75 @@
   document.querySelectorAll("[data-text]").forEach((element) => { element.textContent = text[element.dataset.text]; });
   const find = (id) => document.getElementById(id);
   let timer;
+  let countdownTimer;
+  let statusAnimation;
   let deadline = 0;
   let generation = 0;
   let active = false;
+  let discovering = false;
   const current = await StarcatCompanion.loadConfig();
   find("address").value = current.serviceURL;
   find("name").value = api.runtime.getURL("").startsWith("safari-web-extension:") ? "Safari" : "Chrome";
 
-  function status(key) { find("status").textContent = text[key] || text.failed; }
+  function status(key) {
+    find("status").textContent = text[key] || StarcatCompanion.connectionErrorMessage({ message: key }, language);
+    statusAnimation?.cancel();
+    if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      statusAnimation = find("status").animate?.([{ opacity: 0 }, { opacity: 1 }], { duration: 120, easing: "ease-out" });
+    }
+  }
   async function send(action, values = {}) {
-    const reply = await api.runtime.sendMessage({ type: "starcat.pairing", action, ...values });
-    if (!reply?.ok) throw new Error(reply?.error || "failed");
-    return reply.body;
+    let timeout;
+    try {
+      const request = api.runtime.sendMessage({ type: "starcat.pairing", action, ...values });
+      // Include time waiting for the background queue in the visible discovery budget.
+      const reply = action === "discover" ? await Promise.race([
+        request,
+        new Promise((_resolve, reject) => {
+          timeout = setTimeout(() => reject(new Error("discovery_timeout")), 5000);
+        })
+      ]) : await request;
+      if (!reply?.ok) throw new Error(reply?.error || "failed");
+      return reply.body;
+    } finally { clearTimeout(timeout); }
   }
   function busy(value) {
     active = value;
-    for (const id of ["connect", "discover", "name", "address", "instances", "disconnect"]) find(id).disabled = value;
+    for (const id of ["connect", "discover", "name", "address", "instances", "disconnect"]) find(id).disabled = value || discovering;
     find("cancel").disabled = !value;
   }
   function finish(key) {
+    ++generation;
     clearTimeout(timer);
+    clearTimeout(countdownTimer);
     busy(false);
     find("code").textContent = "";
+    find("countdown").textContent = "";
+    find("connect").textContent = key === "approved" ? text.connect : text.retry;
     status(key);
+    // A poll can already be claiming credentials when the local deadline fires.
+    // Queue cancellation after it so expiry also clears any just-claimed device.
+    if (key === "expired") send("cancel").catch(() => {});
+  }
+  // Expiry must not depend on a poll returning: an unavailable host must not
+  // keep an expired code visible or let its late response overwrite a retry.
+  function updateCountdown(identity) {
+    if (identity !== generation || !active) return;
+    const remaining = deadline - Date.now();
+    if (remaining <= 0) { finish("expired"); return; }
+    find("countdown").textContent = text.countdown.replace("{seconds}", Math.ceil(remaining / 1000));
+    countdownTimer = setTimeout(() => updateCountdown(identity), Math.min(1000, remaining));
   }
   async function discover() {
+    if (active || discovering) return;
+    discovering = true;
+    busy(false);
     status("searching");
-    find("discover").disabled = true;
+    const select = find("instances");
+    select.replaceChildren();
+    select.add(new Option(text.choose, ""));
     try {
       const result = await send("discover", { serviceURL: find("address").value });
-      const select = find("instances");
-      select.replaceChildren();
-      select.add(new Option(text.choose, ""));
       for (const item of result.candidates) select.add(new Option(`${item.channel} · ${item.serviceURL}`, item.serviceURL));
       if (result.candidates.length === 1) {
         select.value = result.candidates[0].serviceURL;
@@ -91,7 +132,7 @@
       } else if (result.candidates.length > 1) find("address").value = "";
       status(result.candidates.length ? "ready" : "none");
     } catch (error) { status(error.message); }
-    finally { find("discover").disabled = false; }
+    finally { discovering = false; busy(active); }
   }
   async function poll(identity) {
     if (identity !== generation || !active) return;
@@ -99,28 +140,36 @@
     try {
       const result = await send("poll");
       if (identity !== generation) return;
+      if (Date.now() >= deadline) { finish("expired"); return; }
       if (result.status === "pending") timer = setTimeout(() => poll(identity), 2000);
       else finish(result.status);
     } catch (error) { if (identity === generation) finish(error.message); }
   }
   find("pairing-form").addEventListener("submit", async (event) => {
     event.preventDefault();
+    if (active || discovering) return;
     const identity = ++generation;
     busy(true);
+    status("connecting");
     try {
       const receipt = await send("start", { serviceURL: find("address").value, name: find("name").value });
       if (identity !== generation) return;
       deadline = Date.parse(receipt.expiresAt);
+      if (!Number.isFinite(deadline)) { finish("invalid_pairing_response"); return; }
       find("code").textContent = receipt.code;
       status("waiting");
-      timer = setTimeout(() => poll(identity), 2000);
-    } catch (error) { finish(error.message); }
+      updateCountdown(identity);
+      if (identity === generation) timer = setTimeout(() => poll(identity), 2000);
+    } catch (error) { if (identity === generation) finish(error.message); }
   });
   find("cancel").addEventListener("click", async () => {
-    ++generation;
+    const identity = ++generation;
     clearTimeout(timer);
-    try { await send("cancel"); finish("cancelled"); }
-    catch (error) { finish(error.message); }
+    clearTimeout(countdownTimer);
+    find("code").textContent = "";
+    find("countdown").textContent = "";
+    try { await send("cancel"); if (identity === generation) finish("cancelled"); }
+    catch (error) { if (identity === generation) finish(error.message); }
   });
   find("discover").addEventListener("click", discover);
   find("instances").addEventListener("change", () => { find("address").value = find("instances").value; });
@@ -133,7 +182,12 @@
   }
   find("disconnect").addEventListener("click", () => disconnect(false));
   find("forget").addEventListener("click", () => disconnect(true));
-  addEventListener("pagehide", () => { clearTimeout(timer); if (active) send("cancel").catch(() => {}); });
+  addEventListener("pagehide", () => {
+    ++generation;
+    clearTimeout(timer);
+    clearTimeout(countdownTimer);
+    if (active) send("cancel").catch(() => {});
+  });
   if (current.paired || current.token) status("connected");
   else await discover();
 })();

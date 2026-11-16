@@ -21,9 +21,10 @@
       "hero.lead": "Bring Starcat context into GitHub repository pages while keeping data routed through the local Starcat app.",
       "pairing.eyebrow": "Pairing",
       "pairing.title": "Local service",
-      "pairing.description": "Use the service URL from Browser Plugin and the Local API Key from Starcat Settings > Integrations > Local API Key.",
+      "pairing.description": "Enable Browser Plugin Service in Starcat's Browser Extensions settings and copy its service URL. Unpair this browser before switching from pairing to a manual Key.",
       "field.serviceURL": "Service URL",
       "field.token": "Local API Key",
+      "field.tokenHelp": "Copy the Key from Starcat > Settings > Extensions & Connections > Browser Extensions > Local API Key.",
       "action.save": "Save",
       "action.test": "Test Connection",
       "links.eyebrow": "Resources",
@@ -64,8 +65,7 @@
       "troubleshooting.check4": "Requests go to <code>127.0.0.1</code>; firewall or proxy tools can block them.",
       "status.saved": "Saved.",
       "status.testing": "Testing connection...",
-      "status.connected": "Connected to {app}.",
-      "status.failed": "Connection failed: {message}"
+      "status.connected": "Connected to {app}."
     },
     zh: {
       "theme.system": "跟随系统",
@@ -76,9 +76,10 @@
       "hero.lead": "将 Starcat 上下文引入 GitHub 仓库页面，同时保持数据通过本地 Starcat 应用程序路由。",
       "pairing.eyebrow": "配对",
       "pairing.title": "本地服务",
-      "pairing.description": "使用 Starcat 设置 > 浏览器插件中的服务地址，以及设置 > 集成 > 本地 API Key 中的 key。",
+      "pairing.description": "打开 Starcat 的浏览器扩展设置，启用浏览器插件服务并复制服务地址。已配对的浏览器需先取消配对，再切换为手工 Key。",
       "field.serviceURL": "服务地址",
       "field.token": "本地 API Key",
+      "field.tokenHelp": "获取 Key：Starcat → 设置 → 扩展与连接 → 浏览器扩展 → 本地 API Key → 复制。",
       "action.save": "保存",
       "action.test": "测试连接",
       "links.eyebrow": "资源",
@@ -119,8 +120,7 @@
       "troubleshooting.check4": "请求会发送到 <code>127.0.0.1</code>；防火墙或代理工具可能会阻止它。",
       "status.saved": "已保存。",
       "status.testing": "正在测试连接...",
-      "status.connected": "已连接到 {app}。",
-      "status.failed": "连接失败：{message}"
+      "status.connected": "已连接到 {app}。"
     }
   };
 
@@ -217,9 +217,13 @@
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
-    await StarcatCompanion.saveConfig(formConfig());
-    serviceURLInput.value = (await StarcatCompanion.loadConfig()).serviceURL;
-    setStatus(t("status.saved"), "success");
+    try {
+      await StarcatCompanion.saveConfig(formConfig());
+      serviceURLInput.value = (await StarcatCompanion.loadConfig()).serviceURL;
+      setStatus(t("status.saved"), "success");
+    } catch (error) {
+      setStatus(StarcatCompanion.connectionErrorMessage(error, currentLocale), "error");
+    }
   });
 
   testButton.addEventListener("click", async () => {
@@ -234,7 +238,7 @@
       const pong = await client.ping();
       setStatus(t("status.connected", { app: pong.app || "Starcat" }), "success");
     } catch (error) {
-      setStatus(t("status.failed", { message: error.message }), "error");
+      setStatus(StarcatCompanion.connectionErrorMessage(error, currentLocale), "error");
     } finally {
       testButton.disabled = false;
     }

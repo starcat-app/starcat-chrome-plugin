@@ -139,7 +139,7 @@
       setConnectionState("connected", { app: pong.app || "Starcat" });
       return { ok: true };
     } catch (error) {
-      const message = error?.message || String(error);
+      const message = StarcatCompanion.connectionErrorMessage(error);
       setConnectionState("error", { message });
       return { ok: false, message };
     }
@@ -154,7 +154,7 @@
       setConnectionState(saved.token || saved.paired ? "ready" : "setup");
       setFormFeedback("Saved.", "success");
     } catch (error) {
-      setFormFeedback(`Save failed: ${error.message}`, "error");
+      setFormFeedback(StarcatCompanion.connectionErrorMessage(error), "error");
     } finally {
       saveButton.disabled = false;
     }
@@ -173,8 +173,9 @@
         setFormFeedback(result.message, "error");
       }
     } catch (error) {
-      setConnectionState("error", { message: error.message });
-      setFormFeedback(`Connection failed: ${error.message}`, "error");
+      const message = StarcatCompanion.connectionErrorMessage(error);
+      setConnectionState("error", { message });
+      setFormFeedback(message, "error");
     } finally {
       saveButton.disabled = false;
       testButton.disabled = false;
