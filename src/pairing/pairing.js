@@ -5,16 +5,51 @@
  */
 (async function () {
   const api = StarcatCompanion.extensionAPI;
+  let timer;
+  let countdownTimer;
+  let statusAnimation;
+  let generation = 0;
+  let active = false;
+  let closed = false;
+  const embedded = globalThis.parent && parent !== globalThis;
+  if (embedded) document.documentElement.dataset.embedded = "true";
+  // Install before asynchronous initialization so an immediately closed dialog
+  // cannot resume setup or start a request after its frame has been removed.
+  globalThis.StarcatPairing = {
+    async close() {
+      if (closed) return;
+      closed = true;
+      ++generation;
+      clearTimeout(timer);
+      clearTimeout(countdownTimer);
+      statusAnimation?.cancel();
+      const needsCancellation = active;
+      active = false;
+      if (needsCancellation) await send("cancel");
+    }
+  };
   const preferences = await api.storage.local.get(["starcatOptionsLocale", "starcatOptionsTheme"]);
+  if (closed) return;
   const language = preferences.starcatOptionsLocale || (navigator.language.startsWith("zh") ? "zh" : "en");
   const words = {
     en: {
-      title: "Connect to Starcat", intro: "Find Starcat on this Mac, then compare the six digits in the app. Only approve a request you started.",
-      name: "Browser name", discover: "Find Starcat", instances: "Available apps", advanced: "Custom service address",
-      address: "Service address", connect: "Connect", cancel: "Cancel request", disconnect: "Unpair browser",
+      title: "Connect to Starcat", intro: "Bring Starcat to your browser. Pair with the app on this Mac to get started.",
+      page_title: "Browser connection · Starcat", local: "On this Mac", privacy: "A local connection between this browser and your Mac.",
+      step_find: "Find app", step_verify: "Verify code", step_done: "Connected",
+      verify_title: "Confirm in Starcat", verify_intro: "Compare the six digits below with the request in the app.",
+      success_title: "You're all set", success_intro: "Return to GitHub to start using your Starcat extension.",
+      configured_title: "Connection configured", configured_intro: "Your connection is saved. Check its status in the extension.",
+      code_label: "PAIRING CODE", verify_help: "Keep this tab open. Only approve a request you started, and only if the digits match.",
+      browser: "Browser", service: "Local service", manage: "Manage connection", manual_summary: "Connect with an API Key instead",
+      paired_authorization: "This browser has its own authorization. You can revoke it separately in Starcat Settings.",
+      key_authorization: "This browser uses a shared API Key. Rotate the Key in Starcat to revoke access.",
+      name: "Browser name", discover: "Find again", discovering: "Finding…", instances: "Available apps", advanced: "Custom service address",
+      address: "Service address", address_help: "Only needed if your app is not found automatically.",
+      connect: "Connect to Starcat", cancel: "Cancel request", disconnect: "Unpair browser",
       forget: "Clear locally only", manual: "Use a Key to connect", retry: "Pair again",
       key_help: "Find and copy your Key in Starcat > Settings > Extensions & Connections > Browser Extensions > Local API Key. If this browser is already paired, unpair it before switching to a manual Key.",
       countdown: "Request expires in {seconds} seconds.", connecting: "Sending a pairing request…",
+      cancelling: "Cancelling the pairing request…", disconnecting: "Removing this browser's connection…",
       offline: "Clearing locally does not revoke app authorization. When offline, also revoke this browser in Starcat Settings. Manual Keys are shared and must be rotated in the app.",
       searching: "Finding Starcat (up to 5 seconds)…", none: "No compatible app found. Open Starcat > Settings > Extensions & Connections > Browser Extensions and enable Browser Plugin Service, then try again or use a Key.",
       choose: "Choose an app", ready: "Choose an app and click Connect.", waiting: "Compare these six digits in Starcat and approve only if they match.",
@@ -30,12 +65,23 @@
       connected: "This browser is configured. You can unpair it here or manage its authorization in Starcat Settings."
     },
     zh: {
-      title: "连接 Starcat", intro: "查找这台 Mac 上的 Starcat，在 App 中核对六位数字。只批准自己主动发起的请求。",
-      name: "浏览器名称", discover: "查找 Starcat", instances: "可连接的 App", advanced: "自定义服务地址",
-      address: "服务地址", connect: "连接", cancel: "取消请求", disconnect: "取消浏览器配对",
+      title: "连接 Starcat", intro: "让浏览器与你的 Mac 协作，在 GitHub 上直接使用 Starcat。",
+      page_title: "浏览器连接 · Starcat", local: "在此 Mac 上", privacy: "仅在此浏览器与你的 Mac 之间建立本机连接。",
+      step_find: "选择 App", step_verify: "核对数字", step_done: "完成连接",
+      verify_title: "在 Starcat 中确认", verify_intro: "切换到 Mac 上的 Starcat，核对两端显示的六位数字。",
+      success_title: "配对成功", success_intro: "一切就绪，返回 GitHub 即可使用 Starcat 浏览器扩展。",
+      configured_title: "已配置连接", configured_intro: "连接配置已保存在此浏览器，可在扩展中查看连接状态。",
+      code_label: "配对确认码", verify_help: "请保持此标签页打开。仅在数字一致时，批准自己主动发起的请求。",
+      browser: "浏览器", service: "本机服务", manage: "管理连接", manual_summary: "改用 API Key 连接",
+      paired_authorization: "此浏览器使用独立授权，可在 Starcat 设置中单独撤销。",
+      key_authorization: "此浏览器使用共享 API Key。如需使其失效，请在 Starcat 中轮换 Key。",
+      name: "浏览器名称", discover: "重新查找", discovering: "查找中…", instances: "可连接的 App", advanced: "自定义服务地址",
+      address: "服务地址", address_help: "仅在无法自动找到 App 时，才需要修改此地址。",
+      connect: "连接 Starcat", cancel: "取消请求", disconnect: "取消浏览器配对",
       forget: "仅清除本地凭据", manual: "使用 Key 连接", retry: "重新配对",
       key_help: "获取 Key：Starcat → 设置 → 扩展与连接 → 浏览器扩展 → 本地 API Key → 复制。已配对的浏览器需先取消配对，再切换为手工 Key。",
       countdown: "请求将在 {seconds} 秒后过期。", connecting: "正在发送配对请求…",
+      cancelling: "正在取消配对请求…", disconnecting: "正在移除此浏览器的连接…",
       offline: "清除本地凭据不会撤销 App 端授权。离线时还需在 Starcat 设置中撤销该浏览器。手工 Key 为共享凭据，需在 App 中轮换才能使其失效。",
       searching: "正在查找 Starcat（最多 5 秒）…", none: "没有找到兼容的 App。请在“Starcat 设置 → 扩展与连接 → 浏览器扩展”中启用浏览器插件服务，再重新查找或使用 Key 连接。",
       choose: "请选择 App", ready: "选择 App 后点击连接。", waiting: "请在 Starcat 中核对这六位数字，仅在数字一致时批准。",
@@ -52,22 +98,55 @@
   };
   const text = words[language] || words.en;
   document.documentElement.lang = language;
+  document.title = text.page_title;
   if (["dark", "light"].includes(preferences.starcatOptionsTheme)) document.documentElement.dataset.theme = preferences.starcatOptionsTheme;
   document.querySelectorAll("[data-text]").forEach((element) => { element.textContent = text[element.dataset.text]; });
   const find = (id) => document.getElementById(id);
-  let timer;
-  let countdownTimer;
-  let statusAnimation;
   let deadline = 0;
-  let generation = 0;
-  let active = false;
   let discovering = false;
   const current = await StarcatCompanion.loadConfig();
+  if (closed) return;
+  let configured = Boolean(current.paired || current.token);
+  let paired = Boolean(current.paired);
+  let phase = "setup";
+  const browserName = api.runtime.getURL("").startsWith("safari-web-extension:") ? "Safari" : "Chrome";
   find("address").value = current.serviceURL;
-  find("name").value = api.runtime.getURL("").startsWith("safari-web-extension:") ? "Safari" : "Chrome";
+  find("name").value = browserName;
+  find("browser-label").textContent = browserName;
+  find("chrome-icon").hidden = browserName !== "Chrome";
+  find("safari-icon").hidden = browserName !== "Safari";
 
+  // Render only the current task. A saved credential is not evidence that the app
+  // is online, so restored connections use a different heading from new approvals.
   function status(key) {
+    if (key === "approved") { configured = true; paired = true; }
+    if (["revoked", "local_only"].includes(key)) { configured = false; paired = false; }
+    const verifying = ["connecting", "waiting", "cancelling"].includes(key);
+    const nextPhase = configured ? "complete" : verifying ? "verify" : "setup";
+    const neutral = ["ready", "connected", "cancelled", "revoked"];
+    const pending = ["searching", "connecting", "waiting", "cancelling", "disconnecting"];
+    find("page").dataset.phase = nextPhase;
+    find("page").dataset.state = key;
+    find("page").dataset.tone = key === "approved" ? "success" : pending.includes(key) ? "busy" : neutral.includes(key) ? "neutral" : "error";
+    find("setup").hidden = configured || verifying;
+    find("verification").hidden = !verifying;
+    find("code-area").hidden = key !== "waiting";
+    find("connection-summary").hidden = !configured;
+    find("connection-management").hidden = !configured;
+    find("manual-help").hidden = configured || verifying;
+    find("steps").hidden = configured;
+    for (const step of [1, 2, 3]) find(`step-${step}`).setAttribute("aria-current", step === (configured ? 3 : verifying ? 2 : 1) ? "step" : "false");
+    const heading = key === "approved" ? "success" : configured ? "configured" : verifying ? "verify" : "";
+    find("title").textContent = heading ? text[`${heading}_title`] : text.title;
+    find("intro").textContent = heading ? text[`${heading}_intro`] : text.intro;
+    find("connected-name").textContent = find("name").value;
+    find("connected-address").textContent = find("address").value;
+    find("authorization-note").textContent = paired ? text.paired_authorization : text.key_authorization;
     find("status").textContent = text[key] || StarcatCompanion.connectionErrorMessage({ message: key }, language);
+    // Hiding a submitted form also hides the focused button; move keyboard users
+    // to the new heading so the next Tab reaches that phase's available action.
+    if (phase !== nextPhase) find("title").focus({ preventScroll: true });
+    phase = nextPhase;
     statusAnimation?.cancel();
     if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
       statusAnimation = find("status").animate?.([{ opacity: 0 }, { opacity: 1 }], { duration: 120, easing: "ease-out" });
@@ -92,6 +171,9 @@
     active = value;
     for (const id of ["connect", "discover", "name", "address", "instances", "disconnect"]) find(id).disabled = value || discovering;
     find("cancel").disabled = !value;
+    find("discover").dataset.loading = String(discovering);
+    find("discover-label").textContent = discovering ? text.discovering : text.discover;
+    find("pairing-form").setAttribute("aria-busy", String(value || discovering));
   }
   function finish(key) {
     ++generation;
@@ -116,7 +198,7 @@
     countdownTimer = setTimeout(() => updateCountdown(identity), Math.min(1000, remaining));
   }
   async function discover() {
-    if (active || discovering) return;
+    if (closed || active || discovering) return;
     discovering = true;
     busy(false);
     status("searching");
@@ -125,7 +207,16 @@
     select.add(new Option(text.choose, ""));
     try {
       const result = await send("discover", { serviceURL: find("address").value });
-      for (const item of result.candidates) select.add(new Option(`${item.channel} · ${item.serviceURL}`, item.serviceURL));
+      for (const item of result.candidates) {
+        // Keep the address visible for multiple running builds; known bundle IDs
+        // get readable names while unrecognized channels retain their identity.
+        const channels = {
+          appstore: "Starcat · App Store", direct: "Starcat · Direct",
+          "com.starcat.app": "Starcat · App Store", "com.starcat.app.debug": "Starcat · App Store (Debug)",
+          "com.starcat.app.direct": "Starcat · Direct", "com.starcat.app.direct.debug": "Starcat · Direct (Debug)"
+        };
+        select.add(new Option(`${channels[item.channel] || item.channel} · ${item.serviceURL}`, item.serviceURL));
+      }
       if (result.candidates.length === 1) {
         select.value = result.candidates[0].serviceURL;
         find("address").value = select.value;
@@ -147,7 +238,7 @@
   }
   find("pairing-form").addEventListener("submit", async (event) => {
     event.preventDefault();
-    if (active || discovering) return;
+    if (closed || active || discovering) return;
     const identity = ++generation;
     busy(true);
     status("connecting");
@@ -168,26 +259,39 @@
     clearTimeout(countdownTimer);
     find("code").textContent = "";
     find("countdown").textContent = "";
+    find("cancel").disabled = true;
+    status("cancelling");
     try { await send("cancel"); if (identity === generation) finish("cancelled"); }
     catch (error) { if (identity === generation) finish(error.message); }
   });
   find("discover").addEventListener("click", discover);
   find("instances").addEventListener("change", () => { find("address").value = find("instances").value; });
   async function disconnect(localOnly) {
+    find("disconnect").disabled = true;
+    find("forget").disabled = true;
+    status("disconnecting");
     try {
       const result = await send("disconnect", { localOnly });
       status(result.status);
       find("forget").hidden = result.status !== "revoke_failed";
     } catch (error) { status(error.message); }
+    finally { find("disconnect").disabled = false; find("forget").disabled = false; }
   }
   find("disconnect").addEventListener("click", () => disconnect(false));
   find("forget").addEventListener("click", () => disconnect(true));
-  addEventListener("pagehide", () => {
-    ++generation;
-    clearTimeout(timer);
-    clearTimeout(countdownTimer);
-    if (active) send("cancel").catch(() => {});
-  });
+  addEventListener("pagehide", () => { globalThis.StarcatPairing.close().catch(() => {}); });
+  if (embedded) {
+    const requestClose = () => parent.postMessage({ type: "starcat.pairing.close" }, "*");
+    find("manual").addEventListener("click", (event) => {
+      event.preventDefault();
+      requestClose();
+    });
+    addEventListener("keydown", (event) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      requestClose();
+    });
+  }
   if (current.paired || current.token) status("connected");
   else await discover();
 })();

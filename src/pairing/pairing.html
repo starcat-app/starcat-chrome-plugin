@@ -4,34 +4,117 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Starcat pairing</title>
-    <link rel="stylesheet" href="../options/options.css">
     <link rel="stylesheet" href="pairing.css">
   </head>
   <body>
-    <main class="page">
-      <section class="panel">
-        <h1 data-text="title">Connect to Starcat</h1>
-        <p data-text="intro">Find the app on this Mac, then compare the six digits in Starcat.</p>
-        <form id="pairing-form">
-          <label class="field"><span data-text="name">Browser name</span><input id="name" maxlength="128" required></label>
-          <div class="actions"><button id="discover" type="button" data-text="discover">Find Starcat</button></div>
-          <label class="field"><span data-text="instances">Available apps</span><select id="instances"></select></label>
-          <details><summary data-text="advanced">Custom service address</summary>
-            <label class="field"><span data-text="address">Service address</span><input id="address" placeholder="http://127.0.0.1:5051" autocomplete="off" spellcheck="false"></label>
-          </details>
-          <div class="actions"><button id="connect" type="submit" data-text="connect">Connect</button><button id="cancel" type="button" data-text="cancel" disabled>Cancel request</button></div>
-        </form>
-        <p id="code" aria-live="polite"></p>
-        <p id="countdown" role="timer" aria-live="off"></p>
-        <p id="status" role="status" aria-live="polite"></p>
-        <div class="actions"><a id="manual" class="button" href="../options/options.html" data-text="manual">Use a Key to connect</a></div>
-        <p data-text="key_help">Find and copy your Key in Starcat &gt; Settings &gt; Extensions &amp; Connections &gt; Browser Extensions &gt; Local API Key. Unpair this browser before switching to a manual Key.</p>
-        <div class="actions">
-          <button id="disconnect" type="button" data-text="disconnect">Unpair browser</button>
-          <button id="forget" type="button" data-text="forget" hidden>Clear locally only</button>
+    <!-- Each phase has one task; credentials and approval remain in the background and app. -->
+    <main id="page" class="page" data-phase="setup" data-tone="neutral">
+      <header class="brandbar">
+        <a class="brand" href="../options/options.html"><img src="../assets/icons/icon-32.png" width="24" height="24" alt="">Starcat</a>
+        <span class="local-label">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><rect x="3" y="3.5" width="14" height="10" rx="2"></rect><path d="M7 17h6M10 13.5V17"></path></svg>
+          <span data-text="local">On this Mac</span>
+        </span>
+      </header>
+      <section class="panel" aria-labelledby="title">
+        <div class="connection-visual" aria-hidden="true">
+          <div class="endpoint">
+            <div class="browser-icon">
+              <span id="chrome-icon"><svg viewBox="0 0 48 48">
+                <circle cx="24" cy="24" r="21" fill="#fff"></circle>
+                <path d="M24 3a21 21 0 0 1 18.2 10.5H24a10.5 10.5 0 0 0-9.1 15.75L5.8 13.5A21 21 0 0 1 24 3Z" fill="#EA4335"></path>
+                <path d="M42.2 13.5a21 21 0 0 1-18.2 31.5l9.1-15.75A10.5 10.5 0 0 0 24 13.5Z" fill="#FBBC04"></path>
+                <path d="M24 45A21 21 0 0 1 5.8 13.5l9.1 15.75a10.5 10.5 0 0 0 18.2 0Z" fill="#34A853"></path>
+                <circle cx="24" cy="24" r="9" fill="#4285F4" stroke="#fff" stroke-width="1.5"></circle>
+              </svg></span>
+              <span id="safari-icon" hidden><svg viewBox="0 0 48 48">
+                <circle cx="24" cy="24" r="21" fill="#1689EE"></circle>
+                <circle cx="24" cy="24" r="17" fill="none" stroke="#fff" stroke-opacity=".75" stroke-width="2" stroke-dasharray="1 4"></circle>
+                <path d="m33 15-5 13-13 5 5-13Z" fill="#fff"></path><path d="m33 15-5 13-8-8Z" fill="#EF5350"></path>
+              </svg></span>
+            </div>
+            <span id="browser-label">Chrome</span>
+          </div>
+          <div class="connection-line">
+            <span class="connection-mark">
+              <svg class="link-mark" viewBox="0 0 24 24"><path d="m10 13 4-4M8 16l-1 1a4.2 4.2 0 0 1-6-6l4-4a4.2 4.2 0 0 1 6 0M16 8l1-1a4.2 4.2 0 0 1 6 6l-4 4a4.2 4.2 0 0 1-6 0" transform="translate(0 -1)"></path></svg>
+              <svg class="check-mark" viewBox="0 0 24 24"><path d="m6 12 4 4 8-8"></path></svg>
+            </span>
+          </div>
+          <div class="endpoint">
+            <img class="starcat-icon" src="../assets/icons/icon-128.png" width="64" height="64" alt="">
+            <span>Starcat</span>
+          </div>
         </div>
-        <p data-text="offline">Clearing locally while Starcat is offline does not revoke the app authorization. Revoke this browser in Starcat Settings.</p>
+        <header class="heading">
+          <h1 id="title" tabindex="-1" data-text="title">Connect to Starcat</h1>
+          <p id="intro" data-text="intro">Bring Starcat to your browser. Pair with the app on this Mac to get started.</p>
+        </header>
+        <ol id="steps" class="steps">
+          <li id="step-1" aria-current="step"><span class="step-number">1</span><span data-text="step_find">Find app</span></li>
+          <li id="step-2"><span class="step-number">2</span><span data-text="step_verify">Verify code</span></li>
+          <li id="step-3"><span class="step-number">3</span><span data-text="step_done">Connected</span></li>
+        </ol>
+        <p id="status" class="status" role="status" aria-live="polite" aria-atomic="true"></p>
+        <div id="setup">
+          <form id="pairing-form">
+            <label class="field" for="name"><span data-text="name">Browser name</span><input id="name" maxlength="128" autocomplete="off" required></label>
+            <div class="field">
+              <div class="field-heading">
+                <label for="instances" data-text="instances">Available apps</label>
+                <button id="discover" class="refresh-button" type="button">
+                  <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M16.5 8A6.8 6.8 0 0 0 5 5L3 7m0-4v4h4M3.5 12A6.8 6.8 0 0 0 15 15l2-2m0 4v-4h-4"></path></svg>
+                  <span id="discover-label" data-text="discover">Find again</span>
+                </button>
+              </div>
+              <select id="instances"></select>
+            </div>
+            <details class="advanced">
+              <summary data-text="advanced">Custom service address</summary>
+              <div class="details-content">
+                <label class="field" for="address"><span data-text="address">Service address</span><input id="address" placeholder="http://127.0.0.1:5051" autocomplete="off" spellcheck="false" aria-describedby="address-help"></label>
+                <p id="address-help" class="help" data-text="address_help">Only needed if your app is not found automatically.</p>
+              </div>
+            </details>
+            <button id="connect" class="button primary" type="submit" data-text="connect">Connect to Starcat</button>
+          </form>
+        </div>
+        <section id="verification" class="verification" hidden>
+          <div id="code-area" hidden>
+            <p class="code-label" data-text="code_label">PAIRING CODE</p>
+            <p id="code" class="code" aria-live="polite" aria-atomic="true"></p>
+            <p id="countdown" class="countdown" role="timer" aria-live="off"></p>
+          </div>
+          <p class="help verification-help" data-text="verify_help">Keep this tab open while you approve the request in Starcat.</p>
+          <button id="cancel" class="button secondary" type="button" data-text="cancel" disabled>Cancel request</button>
+        </section>
+        <section id="connection-summary" class="connection-summary" hidden>
+          <div class="summary-row"><span data-text="browser">Browser</span><strong id="connected-name"></strong></div>
+          <div class="summary-row"><span data-text="service">Local service</span><code id="connected-address"></code></div>
+          <p id="authorization-note" class="help"></p>
+        </section>
+        <details id="manual-help" class="support">
+          <summary><span data-text="manual_summary">Prefer an API Key?</span></summary>
+          <div class="details-content">
+            <p class="help" data-text="key_help">Copy your Local API Key in Starcat Settings.</p>
+            <a id="manual" class="button secondary" href="../options/options.html" data-text="manual">Use a Key to connect</a>
+          </div>
+        </details>
+        <details id="connection-management" class="support" hidden>
+          <summary><span data-text="manage">Manage connection</span></summary>
+          <div class="details-content">
+            <p class="help" data-text="offline">Clearing locally does not revoke app authorization.</p>
+            <div class="management-actions">
+              <button id="disconnect" class="button danger" type="button" data-text="disconnect">Unpair browser</button>
+              <button id="forget" class="button secondary" type="button" data-text="forget" hidden>Clear locally only</button>
+            </div>
+          </div>
+        </details>
       </section>
+      <footer class="page-footer">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m10 2 6 2.5V10c0 3.5-6 7-6 7s-6-3.5-6-7V4.5Z"></path><path d="m7.5 9.5 2 2 3-3.5"></path></svg>
+        <span data-text="privacy">A local connection between this browser and your Mac.</span>
+      </footer>
     </main>
     <script src="../shared/shared.js"></script>
     <script src="pairing.js"></script>

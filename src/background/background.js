@@ -155,6 +155,23 @@
     }, 5000, "discovery_timeout");
   }
 
+  // Version is display metadata only. Prefer Chrome's full client hint; the
+  // reduced UA's zero suffix is not a real release number. Safari uses Version/.
+  async function browserVersion(browser) {
+    const navigator = globalThis.navigator;
+    if (browser === "chrome" && navigator?.userAgentData?.getHighEntropyValues) {
+      try {
+        const hints = await navigator.userAgentData.getHighEntropyValues(["fullVersionList"]);
+        const brands = hints.fullVersionList || [];
+        const version = (brands.find((item) => item.brand === "Google Chrome")
+          || brands.find((item) => item.brand === "Chromium"))?.version;
+        if (/^\d+(?:\.\d+){0,3}$/.test(version)) return version;
+      } catch {}
+    }
+    const version = navigator?.userAgent?.match(browser === "safari" ? /Version\/([\d.]+)/ : /Chrome\/([\d.]+)/)?.[1];
+    return browser === "chrome" ? version?.replace(/\.0\.0\.0$/, "") : version;
+  }
+
   async function pairing(message, sender) {
     if (!extensionPage(sender)) throw new Error("extension_page_required");
     const action = message.action;
@@ -171,7 +188,10 @@
       const transport = nativeAddresses.has(serviceURL) ? "native" : "http";
       const browser = api.runtime.getURL("").startsWith("safari-web-extension:") ? "safari" : "chrome";
       const receipt = await jsonRequest(serviceURL, "/plugin/v1/pairing/start", {
-        method: "POST", body: JSON.stringify({ instance_id: instanceID, browser, name: message.name || `${browser} browser` })
+        method: "POST", body: JSON.stringify({
+          instance_id: instanceID, browser, name: message.name || `${browser} browser`,
+          browser_version: await browserVersion(browser)
+        })
       }, "", transport);
       pending = { serviceURL, receipt, transport, tabID: sender.tab?.id };
       return { code: receipt.code, expiresAt: receipt.expires_at };

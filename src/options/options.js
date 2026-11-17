@@ -27,6 +27,11 @@
       "field.tokenHelp": "Copy the Key from Starcat > Settings > Extensions & Connections > Browser Extensions > Local API Key.",
       "action.save": "Save",
       "action.test": "Test Connection",
+      "action.pair": "Connect without a key",
+      "action.close": "Close",
+      "dialog.title": "Browser connection",
+      "status.paired": "Browser paired with Starcat.",
+      "status.unpaired": "Browser connection removed.",
       "links.eyebrow": "Resources",
       "links.title": "Links",
       "links.website.title": "Starcat website",
@@ -82,6 +87,11 @@
       "field.tokenHelp": "获取 Key：Starcat → 设置 → 扩展与连接 → 浏览器扩展 → 本地 API Key → 复制。",
       "action.save": "保存",
       "action.test": "测试连接",
+      "action.pair": "免 Key 配对",
+      "action.close": "关闭",
+      "dialog.title": "浏览器连接",
+      "status.paired": "浏览器已与 Starcat 配对。",
+      "status.unpaired": "已移除浏览器连接。",
       "links.eyebrow": "资源",
       "links.title": "链接",
       "links.website.title": "Starcat 网站",
@@ -128,6 +138,13 @@
   const serviceURLInput = document.querySelector("#service-url");
   const tokenInput = document.querySelector("#token");
   const testButton = document.querySelector("#test");
+  const pairButton = document.querySelector("#pair");
+  const pairingDialog = document.querySelector("#pairing-dialog");
+  const pairingFrame = document.querySelector("#pairing-frame");
+  const closePairingButton = document.querySelector("#pairing-close");
+  let frameObserver;
+  let closingPairing = false;
+  let configBeforePairing;
   const status = document.querySelector("#status");
   const themeButtons = [...document.querySelectorAll("[data-theme-option]")];
   const localeButtons = [...document.querySelectorAll("[data-locale-option]")];
@@ -183,6 +200,7 @@
     localeButtons.forEach((button) => {
       button.setAttribute("aria-pressed", String(button.dataset.localeOption === currentLocale));
     });
+    pairingFrame.title = t("dialog.title");
   }
 
   function setStatus(message, tone = "") {
@@ -200,6 +218,58 @@
       token: tokenInput.value
     };
   }
+
+  pairButton.addEventListener("click", async () => {
+    configBeforePairing = await StarcatCompanion.loadConfig();
+    pairingDialog.showModal();
+    pairingFrame.src = "../pairing/pairing.html?embedded=1";
+  });
+  pairingFrame.addEventListener("load", () => {
+    frameObserver?.disconnect();
+    if (!pairingDialog.open) return;
+    const page = pairingFrame.contentDocument.getElementById("page");
+    if (!page) return;
+    // Observe natural content height instead of reserving a full page for every phase.
+    frameObserver = new ResizeObserver(() => {
+      pairingFrame.style.height = `${Math.ceil(page.getBoundingClientRect().height)}px`;
+    });
+    frameObserver.observe(page);
+  });
+
+  // Wait for pending cancellation before removing the frame. Closing a completed
+  // pairing must preserve its authorization; the child owns that distinction.
+  async function closePairing() {
+    if (!pairingDialog.open || closingPairing) return;
+    closingPairing = true;
+    closePairingButton.disabled = true;
+    try {
+      await pairingFrame.contentWindow.StarcatPairing?.close();
+      const saved = await StarcatCompanion.loadConfig();
+      if (JSON.stringify(saved) !== JSON.stringify(configBeforePairing)) {
+        serviceURLInput.value = saved.serviceURL;
+        tokenInput.value = saved.token;
+        setStatus(t(saved.paired ? "status.paired" : "status.unpaired"), saved.paired ? "success" : "");
+      }
+    } catch (error) {
+      setStatus(StarcatCompanion.connectionErrorMessage(error, currentLocale), "error");
+    } finally {
+      frameObserver?.disconnect();
+      pairingFrame.removeAttribute("src");
+      pairingFrame.style.height = "";
+      pairingDialog.close();
+      closePairingButton.disabled = false;
+      closingPairing = false;
+      pairButton.focus();
+    }
+  }
+  closePairingButton.addEventListener("click", closePairing);
+  pairingDialog.addEventListener("cancel", (event) => {
+    event.preventDefault();
+    closePairing();
+  });
+  addEventListener("message", (event) => {
+    if (event.source === pairingFrame.contentWindow && event.data?.type === "starcat.pairing.close") closePairing();
+  });
 
   themeButtons.forEach((button) => {
     button.addEventListener("click", async () => {

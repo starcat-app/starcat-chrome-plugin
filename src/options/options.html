@@ -34,7 +34,6 @@
 
       <section class="layout">
         <form id="options-form" class="panel panel--form">
-          <a href="../pairing/pairing.html" target="_blank" rel="noopener">Connect without a key / 免 Key 配对</a>
           <div class="panel__heading">
             <p class="eyebrow" data-i18n="pairing.eyebrow">Pairing</p>
             <h2 data-i18n="pairing.title">Local service</h2>
@@ -53,6 +52,10 @@
           </label>
 
           <div class="actions">
+            <button id="pair" class="button button--pair" type="button" aria-haspopup="dialog" aria-controls="pairing-dialog">
+              <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m8 12 4-4m-5 6-1 1a3.5 3.5 0 0 1-5-5l4-4a3.5 3.5 0 0 1 5 0m3 0 1-1a3.5 3.5 0 0 1 5 5l-4 4a3.5 3.5 0 0 1-5 0"></path></svg>
+              <span data-i18n="action.pair">Connect without a key</span>
+            </button>
             <button id="save" class="button button--primary" type="submit" data-i18n="action.save">Save</button>
             <button id="test" class="button" type="button" data-i18n="action.test">Test Connection</button>
           </div>
@@ -149,6 +152,18 @@
         </article>
       </section>
     </main>
+
+    <!-- Reuse the pairing page in this tab so switching to the Mac app keeps the request alive. -->
+    <dialog id="pairing-dialog" class="pairing-dialog" aria-labelledby="pairing-dialog-title">
+      <header class="pairing-dialog__header">
+        <span id="pairing-dialog-title" data-i18n="dialog.title">Browser connection</span>
+        <button id="pairing-close" class="pairing-dialog__close" type="button" autofocus>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="m9 9 6 6m0-6-6 6"></path></svg>
+          <span class="visually-hidden" data-i18n="action.close">Close</span>
+        </button>
+      </header>
+      <iframe id="pairing-frame" class="pairing-dialog__frame" title="Browser connection"></iframe>
+    </dialog>
 
     <script src="../shared/shared.js"></script>
     <script src="options.js"></script>
