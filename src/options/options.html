@@ -3,162 +3,163 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Starcat Browser Plugin Options</title>
+    <title>Extension Settings · Starcat</title>
     <link rel="icon" type="image/png" href="../assets/icons/icon-32.png">
     <link rel="stylesheet" href="options.css">
   </head>
   <body>
-    <main class="page">
-      <header class="topbar">
-        <div class="switch-group" aria-label="Theme">
-          <button class="switch-button" type="button" data-theme-option="system" data-i18n="theme.system">System</button>
-          <button class="switch-button" type="button" data-theme-option="light" data-i18n="theme.light">Light</button>
-          <button class="switch-button" type="button" data-theme-option="dark" data-i18n="theme.dark">Dark</button>
+    <svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <symbol id="icon-chrome" viewBox="0 0 48 48">
+        <circle cx="24" cy="24" r="21" fill="#fff"></circle>
+        <path d="M24 3a21 21 0 0 1 18.2 10.5H24a10.5 10.5 0 0 0-9.1 15.75L5.8 13.5A21 21 0 0 1 24 3Z" fill="#EA4335"></path>
+        <path d="M42.2 13.5a21 21 0 0 1-18.2 31.5l9.1-15.75A10.5 10.5 0 0 0 24 13.5Z" fill="#FBBC04"></path>
+        <path d="M24 45A21 21 0 0 1 5.8 13.5l9.1 15.75a10.5 10.5 0 0 0 18.2 0Z" fill="#34A853"></path>
+        <circle cx="24" cy="24" r="9" fill="#4285F4" stroke="#fff" stroke-width="1.5"></circle>
+      </symbol>
+      <symbol id="icon-shield" viewBox="0 0 24 24"><path d="m12 3 8 3.5V12c0 4.5-8 9-8 9s-8-4.5-8-9V6.5L12 3Z"></path><path d="m8.5 11.5 2.5 2.5 4.5-5"></path></symbol>
+      <symbol id="icon-plug" viewBox="0 0 24 24"><path d="M8 3v4m8-4v4M5 7h14M7 7v4a5 5 0 0 0 10 0V7m-5 9v5"></path></symbol>
+      <symbol id="icon-code" viewBox="0 0 24 24"><path d="m7 5-5 7 5 7m10-14 5 7-5 7m-3-16-4 18"></path></symbol>
+      <symbol id="icon-sliders" viewBox="0 0 24 24"><path d="M3 7h6m5 0h7M9 4v6M3 17h12m5 0h1m-6-3v6"></path></symbol>
+      <symbol id="icon-help" viewBox="0 0 24 24"><path d="M7.5 7.5a4.5 4.5 0 1 1 6 4.2c-1 .4-1.5 1.2-1.5 2.8M12 20h.01"></path></symbol>
+      <symbol id="icon-key" viewBox="0 0 24 24"><circle cx="8.5" cy="8.5" r="5.5"></circle><path d="m12.5 12.5 8 8m-3-3 2-2m-5-1 2-2"></path></symbol>
+      <symbol id="icon-external" viewBox="0 0 24 24"><path d="M6 18 18 6M8 6h10v10"></path></symbol>
+      <symbol id="icon-close" viewBox="0 0 24 24"><path d="m7 7 10 10M17 7 7 17"></path></symbol>
+    </svg>
+
+    <header class="settings-header">
+      <div class="topbar">
+        <div class="brand">
+          <img src="../assets/icons/icon-128.png" width="40" height="40" alt="">
+          <strong>Starcat</strong>
+          <span id="settings-nav-label" class="brand__context" data-i18n="page.settings">Extension settings</span>
         </div>
-        <div class="switch-group" aria-label="Language">
-          <button class="switch-button" type="button" data-locale-option="en">English</button>
-          <button class="switch-button" type="button" data-locale-option="zh">中文</button>
-        </div>
-      </header>
+        <span class="browser-badge">
+          <svg class="chrome-icon" aria-hidden="true"><use href="#icon-chrome"></use></svg>
+          <span data-i18n="page.browser">Chrome extension</span>
+        </span>
+      </div>
+      <nav class="settings-nav" aria-labelledby="settings-nav-label">
+        <a href="#connection" aria-current="location"><svg aria-hidden="true"><use href="#icon-plug"></use></svg><span data-i18n="nav.connection">Connection</span></a>
+        <a href="#github"><svg aria-hidden="true"><use href="#icon-code"></use></svg><span data-i18n="nav.github">GitHub enhancements</span></a>
+        <a href="#preferences"><svg aria-hidden="true"><use href="#icon-sliders"></use></svg><span data-i18n="nav.preferences">Preferences</span></a>
+        <a href="#support"><svg aria-hidden="true"><use href="#icon-help"></use></svg><span data-i18n="nav.support">Support &amp; privacy</span></a>
+      </nav>
+    </header>
 
-      <section class="hero">
-        <div class="hero__copy">
-          <p class="eyebrow" data-i18n="hero.eyebrow">GitHub companion</p>
-          <h1 data-i18n="hero.title">Starcat Browser Plugin</h1>
-          <p class="hero__lead" data-i18n="hero.lead">
-            Bring Starcat context into GitHub repository pages while keeping data
-            routed through the local Starcat app.
-          </p>
-        </div>
-      </section>
+    <main class="settings">
+      <div class="settings-panels">
+        <section id="connection" class="settings-panel" aria-labelledby="connection-title" tabindex="-1">
+          <header class="section-intro">
+            <h1 id="connection-title" data-i18n="connection.title">Connect to Starcat</h1>
+            <p data-i18n="connection.intro">Connect Chrome to Starcat on this Mac to use its features on GitHub repository pages.</p>
+          </header>
 
-      <section class="layout">
-        <form id="options-form" class="panel panel--form">
-          <div class="panel__heading">
-            <p class="eyebrow" data-i18n="pairing.eyebrow">Pairing</p>
-            <h2 data-i18n="pairing.title">Local service</h2>
-            <p data-i18n="pairing.description">Enable Browser Plugin Service in Starcat's Browser Extensions settings and copy its service URL. Unpair this browser before switching to a manual Key.</p>
+          <div id="connection-card" class="connection-card">
+            <div>
+              <span id="connection-badge" class="connection-badge" data-i18n="mode.unpaired.badge">Not paired</span>
+              <h2 id="connection-heading" data-i18n="mode.unpaired.title">Pair on this Mac</h2>
+              <p id="connection-description" data-i18n="mode.unpaired.description">Enable the plugin service in Starcat’s Browser Extensions settings, then match the six-digit code in the app.</p>
+            </div>
+            <div class="connection-visual" aria-hidden="true">
+              <div class="endpoint"><span class="endpoint__icon"><svg class="chrome-icon"><use href="#icon-chrome"></use></svg></span><span>Chrome</span></div>
+              <span class="connection-path"><span><svg><use href="#icon-shield"></use></svg></span></span>
+              <div class="endpoint"><span class="endpoint__icon"><img src="../assets/icons/icon-128.png" width="46" height="46" alt=""></span><span>Starcat</span></div>
+            </div>
           </div>
 
-          <label class="field">
-            <span data-i18n="field.serviceURL">Service URL</span>
-            <input id="service-url" name="serviceURL" autocomplete="off" spellcheck="false" placeholder="http://127.0.0.1:5051">
-          </label>
+          <form id="options-form" class="connection-form">
+            <h2 data-i18n="connection.settings">Connection settings</h2>
+            <div class="connection-fields">
+              <label class="field" for="service-url">
+                <span data-i18n="field.serviceURL">Service address</span>
+                <input id="service-url" name="serviceURL" autocomplete="off" spellcheck="false" placeholder="http://127.0.0.1:5051">
+              </label>
+              <div id="manual-settings" class="field">
+                <span data-i18n="field.fallback">Alternative connection</span>
+                <details id="manual-key">
+                  <summary class="manual-summary"><svg aria-hidden="true"><use href="#icon-key"></use></svg><span data-i18n="field.manual">Manual API Key</span></summary>
+                  <label class="field manual-field" for="token">
+                    <span data-i18n="field.token">Local API Key</span>
+                    <input id="token" name="token" type="password" autocomplete="off" spellcheck="false" aria-describedby="key-help">
+                    <small id="key-help" data-i18n="field.tokenHelp">Copy the Key in Starcat → Settings → Extensions &amp; Connections → Browser Extensions.</small>
+                  </label>
+                </details>
+              </div>
+            </div>
+            <div class="form-footer">
+              <div class="form-feedback">
+                <p id="draft-status" class="muted"></p>
+                <p id="status" class="feedback" role="status" aria-live="polite"></p>
+              </div>
+              <div class="actions">
+                <button id="save" class="button button--save" type="submit" data-i18n="action.save" disabled>Save</button>
+                <button id="test" class="button" type="button" data-i18n="action.test" disabled>Test connection</button>
+                <button id="pair" class="button button--primary" type="button" aria-haspopup="dialog" aria-controls="pairing-dialog" data-i18n="action.pair" disabled>Pair without a Key</button>
+              </div>
+            </div>
+          </form>
 
-          <label class="field">
-            <span data-i18n="field.token">Local API Key</span>
-            <input id="token" name="token" type="password" autocomplete="off" spellcheck="false" aria-describedby="key-help">
-            <small id="key-help" data-i18n="field.tokenHelp">Copy the Key from Starcat &gt; Settings &gt; Extensions &amp; Connections &gt; Browser Extensions &gt; Local API Key.</small>
-          </label>
+          <p class="connection-help"><a href="#troubleshooting" id="connection-help" data-i18n="connection.help">Can’t find Starcat?</a><span data-i18n="connection.hint">Check that the app is running and its browser plugin service is enabled.</span></p>
+        </section>
 
-          <div class="actions">
-            <button id="pair" class="button button--pair" type="button" aria-haspopup="dialog" aria-controls="pairing-dialog">
-              <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m8 12 4-4m-5 6-1 1a3.5 3.5 0 0 1-5-5l4-4a3.5 3.5 0 0 1 5 0m3 0 1-1a3.5 3.5 0 0 1 5 5l-4 4a3.5 3.5 0 0 1-5 0"></path></svg>
-              <span data-i18n="action.pair">Connect without a key</span>
-            </button>
-            <button id="save" class="button button--primary" type="submit" data-i18n="action.save">Save</button>
-            <button id="test" class="button" type="button" data-i18n="action.test">Test Connection</button>
-          </div>
-
-          <p id="status" class="status" role="status" aria-live="polite"></p>
-        </form>
-
-        <aside class="panel panel--links">
-          <div class="panel__heading">
-            <p class="eyebrow" data-i18n="links.eyebrow">Resources</p>
-            <h2 data-i18n="links.title">Links</h2>
-          </div>
-
-          <a class="link-card" href="https://starcat.ink" target="_blank" rel="noreferrer">
-            <span>
-              <strong data-i18n="links.website.title">Starcat website</strong>
-              <small data-i18n="links.website.body">Product updates and downloads</small>
-            </span>
-            <span aria-hidden="true" data-i18n="links.open">Open</span>
-          </a>
-
-          <a class="link-card" href="https://starcat.ink/privacy" target="_blank" rel="noreferrer">
-            <span>
-              <strong data-i18n="links.privacy.title">Privacy policy</strong>
-              <small data-i18n="links.privacy.body">How Starcat handles local and network data</small>
-            </span>
-            <span aria-hidden="true" data-i18n="links.open">Open</span>
-          </a>
-
-          <div class="notice">
-            <strong data-i18n="notice.title">Local-first boundary</strong>
-            <p data-i18n="notice.body">The extension stores only the service URL and Local API Key. Repository context and notes stay owned by Starcat.</p>
-          </div>
-        </aside>
-      </section>
-
-      <section class="info-grid" aria-label="Plugin information">
-        <article class="panel">
-          <div class="panel__heading">
-            <p class="eyebrow" data-i18n="surfaces.eyebrow">GitHub surfaces</p>
-            <h2 data-i18n="surfaces.title">What appears where</h2>
-          </div>
+        <section id="github" class="settings-panel" aria-labelledby="github-title" tabindex="-1" hidden>
+          <h2 id="github-title" data-i18n="nav.github">GitHub enhancements</h2>
+          <p class="section-caption" data-i18n="github.intro">Once connected, refresh a GitHub repository page to see these features.</p>
           <ul class="surface-list">
-            <li><span data-i18n="surfaces.about.label">About sidebar</span><strong data-i18n="surfaces.about.value">Similar repos, private notes</strong></li>
-            <li><span data-i18n="surfaces.signals.label">Watch/Fork/Starred row</span><strong data-i18n="surfaces.signals.value">Health, OpenSSF</strong></li>
-            <li><span data-i18n="surfaces.toolbar.label">Add file/Code toolbar</span><strong data-i18n="surfaces.toolbar.value">Wiki, CodeFlow, Codebase</strong></li>
+            <li><div><strong data-i18n="github.about">About sidebar</strong><p data-i18n="github.notes">Private notes for starred repos, similar repos (Pro)</p></div></li>
+            <li><div><strong data-i18n="github.signals">Watch / Fork / Star row</strong><p>Health, OpenSSF</p></div><span class="pro-badge">PRO</span></li>
+            <li><div><strong data-i18n="github.toolbar">Add file / Code toolbar</strong><p>Wiki, CodeFlow, Codebase</p></div><span class="pro-badge">PRO</span></li>
           </ul>
-        </article>
+          <p class="muted section-note" data-i18n="github.pro">Pro features stay visible and require a Starcat Pro subscription to use.</p>
+        </section>
 
-        <article class="panel">
-          <div class="panel__heading">
-            <p class="eyebrow" data-i18n="pro.eyebrow">Starcat Pro</p>
-            <h2 data-i18n="pro.title">Premium capabilities</h2>
-          </div>
-          <div class="feature-matrix">
-            <div class="feature-row">
-              <span data-i18n="pro.free.label">Free</span>
-              <p data-i18n="pro.free.body">Local pairing, GitHub page entry points, and private notes for starred repositories.</p>
-            </div>
-            <div class="feature-row feature-row--pro">
-              <span data-i18n="pro.pro.label">Pro</span>
-              <p data-i18n="pro.pro.body">Similar repositories, Wiki links, Health, OpenSSF, CodeFlow, and Codebase actions.</p>
+        <section id="preferences" class="settings-panel" aria-labelledby="preferences-title" tabindex="-1" hidden>
+          <h2 id="preferences-title" data-i18n="nav.preferences">Preferences</h2>
+          <div class="preference-row">
+            <span id="theme-label" data-i18n="preference.theme">Appearance</span>
+            <div class="switch-group" role="group" aria-labelledby="theme-label">
+              <button class="switch-button" type="button" data-theme-option="system" data-i18n="theme.system">System</button>
+              <button class="switch-button" type="button" data-theme-option="light" data-i18n="theme.light">Light</button>
+              <button class="switch-button" type="button" data-theme-option="dark" data-i18n="theme.dark">Dark</button>
             </div>
           </div>
-          <p class="muted" data-i18n="pro.note">
-            Non-Pro users still see the entry points, but Pro-only controls are disabled and no Pro data is returned.
-          </p>
-        </article>
+          <div class="preference-row">
+            <span id="locale-label" data-i18n="preference.locale">Language</span>
+            <div class="switch-group" role="group" aria-labelledby="locale-label">
+              <button class="switch-button" type="button" data-locale-option="zh" lang="zh-Hans">中文</button>
+              <button class="switch-button" type="button" data-locale-option="en" lang="en">English</button>
+            </div>
+          </div>
+          <p class="muted section-note" data-i18n="preference.hint">Changes apply immediately.</p>
+        </section>
 
-        <article class="panel panel--wide">
-          <div class="panel__heading">
-            <p class="eyebrow" data-i18n="setup.eyebrow">Setup</p>
-            <h2 data-i18n="setup.title">How to use</h2>
-          </div>
-          <ol class="steps">
-            <li data-i18n="setup.step1">Open Starcat and enable Browser Plugin Service.</li>
-            <li data-i18n="setup.step2">Copy the service URL and Local API Key into this page.</li>
-            <li data-i18n="setup.step3">Click Test Connection and confirm the Starcat app responds.</li>
-            <li data-i18n="setup.step4">Open a GitHub repository page and refresh it once.</li>
-          </ol>
-        </article>
+        <section id="support" class="settings-panel" aria-labelledby="support-title" tabindex="-1" hidden>
+          <h2 id="support-title" data-i18n="nav.support">Support &amp; privacy</h2>
+          <details id="troubleshooting" class="support-item">
+            <summary><span data-i18n="support.troubleshoot">Troubleshoot connection</span></summary>
+            <ul class="section-caption">
+              <li data-i18n="support.checkApp">In Starcat, open Settings → Extensions &amp; Connections → Browser Extensions and enable the browser plugin service.</li>
+              <li data-i18n="support.checkAddress">Check that the service address matches the one in Starcat and the loopback connection is allowed by your firewall or proxy.</li>
+              <li data-i18n="support.refresh">After saving a change, refresh the GitHub repository page.</li>
+            </ul>
+          </details>
+          <a class="support-item" href="https://starcat.ink" target="_blank" rel="noreferrer"><span data-i18n="support.website">Starcat website</span><svg aria-hidden="true"><use href="#icon-external"></use></svg></a>
+          <a class="support-item" href="https://starcat.ink/privacy" target="_blank" rel="noreferrer"><span data-i18n="support.privacy">Privacy policy</span><svg aria-hidden="true"><use href="#icon-external"></use></svg></a>
+        </section>
+      </div>
 
-        <article class="panel panel--wide">
-          <div class="panel__heading">
-            <p class="eyebrow" data-i18n="troubleshooting.eyebrow">Troubleshooting</p>
-            <h2 data-i18n="troubleshooting.title">Quick checks</h2>
-          </div>
-          <div class="check-list">
-            <p data-i18n="troubleshooting.check1">Starcat must be running, and the Browser Plugin Service must be enabled.</p>
-            <p data-i18n="troubleshooting.check2">The extension must be reloaded after local plugin files change.</p>
-            <p data-i18n="troubleshooting.check3">GitHub pages may need a hard refresh after changing the service URL or token.</p>
-            <p data-i18n-html="troubleshooting.check4">Requests go to <code>127.0.0.1</code>; firewall or proxy tools can block them.</p>
-          </div>
-        </article>
-      </section>
+      <footer class="settings-footer">
+        <svg aria-hidden="true"><use href="#icon-shield"></use></svg>
+        <span data-i18n="page.privacy">Connection credentials stay on this device. Starcat manages repository data and notes.</span>
+      </footer>
     </main>
 
-    <!-- Reuse the pairing page in this tab so switching to the Mac app keeps the request alive. -->
+    <!-- Keep the pairing request alive while the user switches to Starcat. -->
     <dialog id="pairing-dialog" class="pairing-dialog" aria-labelledby="pairing-dialog-title">
       <header class="pairing-dialog__header">
-        <span id="pairing-dialog-title" data-i18n="dialog.title">Browser connection</span>
+        <h2 id="pairing-dialog-title" data-i18n="action.pair">Pair without a Key</h2>
         <button id="pairing-close" class="pairing-dialog__close" type="button" autofocus>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="m9 9 6 6m0-6-6 6"></path></svg>
+          <svg aria-hidden="true"><use href="#icon-close"></use></svg>
           <span class="visually-hidden" data-i18n="action.close">Close</span>
         </button>
       </header>

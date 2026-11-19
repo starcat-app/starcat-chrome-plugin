@@ -96,7 +96,21 @@
       connected: "此浏览器已配置连接。可在这里取消配对，或在 Starcat 设置中管理授权。"
     }
   };
-  const text = words[language] || words.en;
+  const embeddedWords = {
+    en: {
+      step_find: "Choose app", verify_title: "Match the code in Starcat",
+      verify_intro: "Approve in the app only when both codes match.",
+      verify_help: "Only approve a request you started.",
+      waiting: "Waiting for Starcat approval", countdown: "Expires in {seconds}s"
+    },
+    zh: {
+      step_find: "选择本机", step_verify: "核对配对码", verify_title: "在 Starcat 中核对配对码",
+      verify_intro: "两处显示的数字一致时，再在 App 中点击批准。",
+      verify_help: "只批准你亲自发起的请求。",
+      waiting: "等待 Starcat 批准", countdown: "{seconds} 秒后过期"
+    }
+  };
+  const text = { ...(words[language] || words.en), ...(embedded ? embeddedWords[language] || embeddedWords.en : {}) };
   document.documentElement.lang = language;
   document.title = text.page_title;
   if (["dark", "light"].includes(preferences.starcatOptionsTheme)) document.documentElement.dataset.theme = preferences.starcatOptionsTheme;
@@ -106,7 +120,7 @@
   let discovering = false;
   const current = await StarcatCompanion.loadConfig();
   if (closed) return;
-  let configured = Boolean(current.paired || current.token);
+  let configured = Boolean(current.paired || (!embedded && current.token));
   let paired = Boolean(current.paired);
   let phase = "setup";
   const browserName = api.runtime.getURL("").startsWith("safari-web-extension:") ? "Safari" : "Chrome";
@@ -136,6 +150,11 @@
     find("manual-help").hidden = configured || verifying;
     find("steps").hidden = configured;
     for (const step of [1, 2, 3]) find(`step-${step}`).setAttribute("aria-current", step === (configured ? 3 : verifying ? 2 : 1) ? "step" : "false");
+    if (embedded && phase !== nextPhase) {
+      // Keep a single live announcement while moving feedback beside Cancel in verification.
+      if (verifying) find("verification-footer").prepend(find("status"));
+      else find("setup").before(find("status"));
+    }
     const heading = key === "approved" ? "success" : configured ? "configured" : verifying ? "verify" : "";
     find("title").textContent = heading ? text[`${heading}_title`] : text.title;
     find("intro").textContent = heading ? text[`${heading}_intro`] : text.intro;
@@ -247,7 +266,16 @@
       if (identity !== generation) return;
       deadline = Date.parse(receipt.expiresAt);
       if (!Number.isFinite(deadline)) { finish("invalid_pairing_response"); return; }
-      find("code").textContent = receipt.code;
+      if (embedded) {
+        const digits = Array.from(String(receipt.code), (digit) => {
+          const cell = document.createElement("span");
+          cell.textContent = digit;
+          return cell;
+        });
+        find("code").replaceChildren(...digits);
+      } else {
+        find("code").textContent = receipt.code;
+      }
       status("waiting");
       updateCountdown(identity);
       if (identity === generation) timer = setTimeout(() => poll(identity), 2000);
@@ -281,10 +309,10 @@
   find("forget").addEventListener("click", () => disconnect(true));
   addEventListener("pagehide", () => { globalThis.StarcatPairing.close().catch(() => {}); });
   if (embedded) {
-    const requestClose = () => parent.postMessage({ type: "starcat.pairing.close" }, "*");
+    const requestClose = (useManualKey = false) => parent.postMessage({ type: "starcat.pairing.close", useManualKey }, "*");
     find("manual").addEventListener("click", (event) => {
       event.preventDefault();
-      requestClose();
+      requestClose(true);
     });
     addEventListener("keydown", (event) => {
       if (event.key !== "Escape") return;
@@ -292,6 +320,6 @@
       requestClose();
     });
   }
-  if (current.paired || current.token) status("connected");
+  if (configured) status("connected");
   else await discover();
 })();

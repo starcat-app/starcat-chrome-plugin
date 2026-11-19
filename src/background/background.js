@@ -263,13 +263,23 @@
       pairingQueue = operation.catch(() => {});
       return { ok: true, body: await operation };
     }
-    if (message?.type !== "starcat.localRequest") return undefined;
-    const method = message.method || "GET";
-    if (!businessPath(message.path, method)) throw new Error("unsupported_local_request");
-    const current = await config();
+    const optionsPing = message?.type === "starcat.optionsPing";
+    if (!optionsPing && message?.type !== "starcat.localRequest") return undefined;
+    if (optionsPing && (sender.id !== api.runtime.id || sender.url?.split("#")[0] !== api.runtime.getURL("src/options/options.html"))) {
+      throw new Error("extension_page_required");
+    }
+    const method = optionsPing ? "GET" : message.method || "GET";
+    const path = optionsPing ? "/plugin/v1/ping" : message.path;
+    if (!businessPath(path, method)) throw new Error("unsupported_local_request");
+    const saved = await config();
+    // Preview unsaved manual settings through a fixed ping. Paired credentials
+    // and their transport always come from the background's saved connection.
+    const current = optionsPing && saved.mode !== "paired"
+      ? { serviceURL: localURL(message.serviceURL), token: typeof message.token === "string" ? message.token.trim() : "" }
+      : saved;
     if (!current.token) throw new Error("missing_token");
     try {
-      return { ok: true, body: await jsonRequest(current.serviceURL, message.path, { method, body: message.body }, current.token, current.transport) };
+      return { ok: true, body: await jsonRequest(current.serviceURL, path, { method, body: optionsPing ? undefined : message.body }, current.token, current.transport) };
     } catch (error) {
       if (error.status === 401 && current.mode === "paired") error.message = "pairing_revoked";
       throw error;
@@ -277,7 +287,7 @@
   }
 
   api.runtime.onMessage.addListener((message, sender, reply) => {
-    if (!["starcat.publicConfig", "starcat.pairing", "starcat.localRequest"].includes(message?.type)) return false;
+    if (!["starcat.publicConfig", "starcat.pairing", "starcat.localRequest", "starcat.optionsPing"].includes(message?.type)) return false;
     handle(message, sender).then(reply, (error) => reply({ ok: false, error: error.message, status: error.status || 0 }));
     return true;
   });
