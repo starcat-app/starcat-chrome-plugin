@@ -3,78 +3,42 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Starcat Browser Plugin</title>
+    <title>Starcat</title>
     <link rel="icon" type="image/png" href="../assets/icons/icon-32.png">
     <link rel="stylesheet" href="popup.css">
   </head>
   <body>
-    <main class="popup">
+    <main class="popup" hidden>
       <header class="app-header">
-        <img class="app-icon" src="../assets/icons/icon-48.png" alt="">
-        <div class="app-heading">
-          <h1>Starcat Browser Plugin</h1>
-          <p>GitHub companion · Chrome</p>
+        <img class="app-icon" src="../assets/icons/icon-48.png" width="36" height="36" alt="">
+        <div>
+          <h1>Starcat</h1>
+          <p data-i18n="browser"></p>
         </div>
-        <span id="version" class="version-badge" aria-label="Plugin version">v—</span>
+        <span id="version" class="version"></span>
       </header>
 
-      <section id="connection-card" class="card connection-card" data-state="checking" aria-labelledby="connection-heading">
-        <div class="section-heading">
-          <p id="connection-heading" class="eyebrow">Connection</p>
-          <div class="status-badge" aria-live="polite">
-            <span class="status-dot" aria-hidden="true"></span>
-            <span id="connection-status">Checking</span>
+      <section id="connection-card" class="connection-card" aria-labelledby="connection-title">
+        <div class="connection-summary" role="status" aria-atomic="true">
+          <span class="status-dot" aria-hidden="true"></span>
+          <div>
+            <h2 id="connection-title"></h2>
+            <p id="connection-description"></p>
           </div>
         </div>
 
-        <div class="connection-summary" aria-live="polite">
-          <h2 id="connection-title">Checking local connection…</h2>
-          <p id="connection-description">Looking for the Starcat app on this Mac.</p>
-        </div>
-
-        <dl class="metadata-list">
-          <div class="metadata-row">
-            <dt>Service URL</dt>
-            <dd><code id="connection-service-url">—</code></dd>
-          </div>
-          <div class="metadata-row">
-            <dt>Last checked</dt>
-            <dd id="last-checked">Checking…</dd>
-          </div>
+        <dl class="last-check">
+          <dt data-i18n="lastChecked"></dt>
+          <dd id="last-checked"></dd>
         </dl>
+
+        <a id="pair" class="primary-action" href="../pairing/pairing.html" target="_blank" rel="noopener" data-i18n="pair" hidden></a>
+        <button id="test" class="primary-action" type="button"></button>
       </section>
 
-      <form id="popup-form" class="card pairing-card">
-        <a href="../pairing/pairing.html" target="_blank" rel="noopener">Connect without a key / 免 Key 配对</a>
-        <div class="pairing-heading">
-          <p class="eyebrow">Local pairing</p>
-          <p>Advanced: manual service URL and shared Local API Key. Copy the Key from Starcat &gt; Settings &gt; Extensions &amp; Connections &gt; Browser Extensions &gt; Local API Key. Unpair first to switch modes.</p>
-        </div>
-
-        <label class="field">
-          <span>Service URL</span>
-          <input id="service-url" name="serviceURL" autocomplete="off" spellcheck="false" placeholder="http://127.0.0.1:5051">
-        </label>
-
-        <label class="field">
-          <span>Local API Key</span>
-          <input id="token" name="token" type="password" autocomplete="off" spellcheck="false">
-        </label>
-
-        <div class="actions">
-          <button id="save" type="submit">Save</button>
-          <button id="test" type="button" class="primary">Test Connection</button>
-        </div>
-
-        <p id="form-feedback" class="form-feedback" role="status" aria-live="polite"></p>
-      </form>
-
-      <button id="open-options" type="button" class="options-link">
-        <span>
-          <strong>Open full options</strong>
-          <small>Theme, language, setup and troubleshooting</small>
-        </span>
-        <span class="options-arrow" aria-hidden="true">→</span>
+      <button id="open-options" class="options-link" type="button">
+        <span data-i18n="settings"></span>
+        <span aria-hidden="true">↗</span>
       </button>
     </main>
 
